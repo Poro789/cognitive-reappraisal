@@ -502,6 +502,60 @@ input[type="range"].slider:focus-visible {
   outline-offset: 2px;
 }
 
+/* "以上都不像" + "跳过" action row */
+.tag-alt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.tag-alt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch);
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.tag-alt-btn:hover { border-color: var(--accent); }
+.tag-alt-btn.active {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tag-alt-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Optional free-text note under "以上都不像" */
+.distortion-note-wrap {
+  margin-top: 12px;
+}
+.distortion-note {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--touch);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.distortion-note::placeholder { color: var(--muted); }
+.distortion-note:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* Review screen */
 .review-compare {
   display: flex;
@@ -955,10 +1009,16 @@ body.selecting .entry-check {
   // ---------- Constants ----------
   var STORAGE_KEY = "cognitive-reappraisal-entries";
 
+  // The 8 specific cognitive distortion types (Beck / Burns).
+// "以上都不像" and "跳过" are handled as separate actions, not tags.
   var DISTORTIONS = [
     "灾难化", "非黑即白", "以偏概全", "读心术",
-    "贴标签", "应该式思维", "个人化", "情绪化推理", "其他/不确定"
+    "贴标签", "应该式思维", "个人化", "情绪化推理"
   ];
+
+  // The "none of the above" marker — a distinct, meaningful negative signal
+  // (the user judged it's not a common distortion), exported to the reviewer.
+  var NONE_OF_ABOVE = "以上都不像";
 
   // Explanations for each distortion (based on Beck / Burns CBT literature)
   var DISTORTION_INFO = {
@@ -993,10 +1053,6 @@ body.selecting .entry-check {
     "情绪化推理": {
       desc: "把感受当成事实：\u201c我感觉是这样，那它就是这样的。\u201d",
       example: "我觉得自己是个负担，所以我肯定就是。"
-    },
-    "其他/不确定": {
-      desc: "说不清属于哪一种，或者以上都不太像。没关系，跳过就好。",
-      example: ""
     }
   };
 
@@ -1148,7 +1204,16 @@ body.selecting .entry-check {
       lines.push("自动想法：" + (e.automatic_thought || "（未填写）") + "（当时相信程度 " + e.thought_belief_before + "/10）");
       lines.push("情绪：" + (e.emotion_label || "（未命名）") + "，强度 " + e.emotion_intensity_before + "/10");
       if (e.cognitive_distortion && e.cognitive_distortion.length > 0) {
-        lines.push("认知扭曲类型：" + e.cognitive_distortion.join("、"));
+        if (e.cognitive_distortion.indexOf(NONE_OF_ABOVE) !== -1) {
+          var note = (e.distortion_note || "").trim();
+          if (note) {
+            lines.push("认知扭曲类型：以上都不像（用户描述：" + note + "）");
+          } else {
+            lines.push("认知扭曲类型：以上都不像（用户判断不属于常见认知扭曲）");
+          }
+        } else {
+          lines.push("认知扭曲类型：" + e.cognitive_distortion.join("、"));
+        }
       }
       lines.push("支持这个想法的证据：" + (e.evidence_for || "（未填写）"));
       lines.push("反对这个想法的证据：" + (e.evidence_against || "（未填写）"));
@@ -1406,6 +1471,7 @@ body.selecting .entry-check {
       emotion_label: "",
       emotion_intensity_before: 5,
       cognitive_distortion: [],
+      distortion_note: "",
       evidence_for: "",
       evidence_against: "",
       alternative_thought: "",
@@ -1457,7 +1523,20 @@ body.selecting .entry-check {
         });
         html += '</div>';
         html += '<div class="tag-explain" id="tag-explain" hidden></div>';
+        // Two distinct "no specific type" actions:
+        //  - 以上都不像: a meaningful negative signal (judged not a common distortion)
+        //  - 跳过: leave blank, no signal
+        var noneActive = draft.cognitive_distortion.indexOf(NONE_OF_ABOVE) !== -1;
+        html += '<div class="tag-alt-actions">';
+        html += '<button type="button" class="tag-alt-btn' + (noneActive ? " active" : "") + '" id="btn-none-above">以上都不像</button>';
         html += '<button type="button" class="skip-link" id="btn-skip-tag">跳过，不确定</button>';
+        html += '</div>';
+        // Optional free-text note, only relevant when "以上都不像" is chosen
+        if (noneActive) {
+          html += '<div class="distortion-note-wrap">';
+          html += '<input type="text" class="distortion-note" id="wiz-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下，比如：我觉得运气对我特别差" value="' + escapeHtml(draft.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+          html += '</div>';
+        }
       }
 
       html += '</div>';
@@ -1560,11 +1639,22 @@ body.selecting .entry-check {
     var tagGroup = document.getElementById("tag-group");
     if (tagGroup) {
       var tagExplain = document.getElementById("tag-explain");
+      var noneBtn = document.getElementById("btn-none-above");
       var lastShownTag = null;
+
+      function hasNone() { return draft.cognitive_distortion.indexOf(NONE_OF_ABOVE) !== -1; }
 
       function updateTagExplain() {
         if (!tagExplain) return;
-        // Show info for the most recently selected tag
+        // "以上都不像" has its own fixed explanation
+        if (hasNone()) {
+          tagExplain.innerHTML =
+            '<div class="tag-explain-title">' + escapeHtml(NONE_OF_ABOVE) + '</div>' +
+            '<div class="tag-explain-desc">你觉得这个想法不属于上面任何一种常见扭曲。这本身是个有用的判断——导出时会让审查者知道这一点。</div>';
+          tagExplain.hidden = false;
+          return;
+        }
+        // Otherwise show info for the most recently selected specific tag
         var shown = null;
         if (lastShownTag && draft.cognitive_distortion.indexOf(lastShownTag) !== -1) {
           shown = lastShownTag;
@@ -1588,8 +1678,13 @@ body.selecting .entry-check {
         tagExplain.hidden = false;
       }
 
-      // If resuming an edit with tags already selected, show the last one
-      if (draft.cognitive_distortion.length > 0) {
+      // Keep specific tags and "以上都不像" mutually exclusive
+      function syncNoneButton() {
+        if (noneBtn) noneBtn.classList.toggle("active", hasNone());
+      }
+
+      // If resuming with tags already selected, show the last specific one
+      if (draft.cognitive_distortion.length > 0 && !hasNone()) {
         lastShownTag = draft.cognitive_distortion[draft.cognitive_distortion.length - 1];
       }
 
@@ -1599,6 +1694,9 @@ body.selecting .entry-check {
           var tag = btn.getAttribute("data-tag");
           var idx = draft.cognitive_distortion.indexOf(tag);
           if (idx === -1) {
+            // Selecting a specific type clears "以上都不像" and its note
+            draft.cognitive_distortion = draft.cognitive_distortion.filter(function(t) { return t !== NONE_OF_ABOVE; });
+            draft.distortion_note = "";
             draft.cognitive_distortion.push(tag);
             lastShownTag = tag;
           } else {
@@ -1606,16 +1704,44 @@ body.selecting .entry-check {
             if (lastShownTag === tag) lastShownTag = null;
           }
           btn.classList.toggle("active");
+          syncNoneButton();
           updateTagExplain();
+          render(); // note input appears/disappears with the selection
         });
       });
 
+      if (noneBtn) noneBtn.addEventListener("click", function() {
+        if (hasNone()) {
+          // Toggle off
+          draft.cognitive_distortion = draft.cognitive_distortion.filter(function(t) { return t !== NONE_OF_ABOVE; });
+        } else {
+          // Selecting "以上都不像" clears all specific tags
+          draft.cognitive_distortion = [NONE_OF_ABOVE];
+          lastShownTag = null;
+        }
+        tagGroup.querySelectorAll(".tag-btn").forEach(function(b) { b.classList.remove("active"); });
+        syncNoneButton();
+        updateTagExplain();
+        // Re-render so the optional note input appears/disappears with the selection
+        render();
+      });
+
+      // Optional note input (only present when "以上都不像" is active)
+      var noteInput = document.getElementById("wiz-distortion-note");
+      if (noteInput) {
+        noteInput.addEventListener("input", function() {
+          draft.distortion_note = noteInput.value;
+        });
+      }
+
+      syncNoneButton();
       updateTagExplain();
     }
 
     var btnSkip = document.getElementById("btn-skip-tag");
     if (btnSkip) btnSkip.addEventListener("click", function() {
       draft.cognitive_distortion = [];
+      draft.distortion_note = "";
       w.step++;
       render();
     });
@@ -1652,6 +1778,7 @@ body.selecting .entry-check {
       emotion_label: draft.emotion_label,
       emotion_intensity_before: draft.emotion_intensity_before,
       cognitive_distortion: draft.cognitive_distortion,
+      distortion_note: draft.distortion_note || "",
       evidence_for: draft.evidence_for,
       evidence_against: draft.evidence_against,
       alternative_thought: draft.alternative_thought,
@@ -1756,7 +1883,16 @@ body.selecting .entry-check {
       });
       html += '</div>';
       html += '<div class="tag-explain" id="detail-tag-explain" hidden></div>';
+      var noneActive = tagDraft.indexOf(NONE_OF_ABOVE) !== -1;
+      html += '<div class="tag-alt-actions">';
+      html += '<button type="button" class="tag-alt-btn' + (noneActive ? " active" : "") + '" id="detail-none-above">以上都不像</button>';
       html += '<button type="button" class="skip-link" id="detail-tag-clear">清空，不选</button>';
+      html += '</div>';
+      if (noneActive) {
+        html += '<div class="distortion-note-wrap">';
+        html += '<input type="text" class="distortion-note" id="detail-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下，比如：我觉得运气对我特别差" value="' + escapeHtml(e.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+        html += '</div>';
+      }
       html += '<div class="detail-edit-actions">';
       html += '<button class="btn btn-primary" id="edit-save">保存</button>';
       html += '<button class="btn btn-text" id="edit-cancel">取消</button>';
@@ -1882,11 +2018,21 @@ body.selecting .entry-check {
     var detailTagGroup = document.getElementById("detail-tag-group");
     if (detailTagGroup) {
       var detailExplain = document.getElementById("detail-tag-explain");
+      var noneBtn = document.getElementById("detail-none-above");
       var tagDraft = state.detail.tagDraft;
-      var lastShown = tagDraft.length ? tagDraft[tagDraft.length - 1] : null;
+      var lastShown = (tagDraft.length && tagDraft[tagDraft.length - 1] !== NONE_OF_ABOVE) ? tagDraft[tagDraft.length - 1] : null;
+
+      function hasNone() { return tagDraft.indexOf(NONE_OF_ABOVE) !== -1; }
 
       function updateExplain() {
         if (!detailExplain) return;
+        if (hasNone()) {
+          detailExplain.innerHTML =
+            '<div class="tag-explain-title">' + escapeHtml(NONE_OF_ABOVE) + '</div>' +
+            '<div class="tag-explain-desc">你觉得这个想法不属于上面任何一种常见扭曲。这本身是个有用的判断——导出时会让审查者知道这一点。</div>';
+          detailExplain.hidden = false;
+          return;
+        }
         var shown = null;
         if (lastShown && tagDraft.indexOf(lastShown) !== -1) shown = lastShown;
         else if (tagDraft.length) shown = tagDraft[tagDraft.length - 1];
@@ -1900,25 +2046,67 @@ body.selecting .entry-check {
         detailExplain.hidden = false;
       }
 
+      function syncNoneButton() {
+        if (noneBtn) noneBtn.classList.toggle("active", hasNone());
+      }
+
       detailTagGroup.querySelectorAll(".tag-btn").forEach(function(btn) {
         btn.addEventListener("click", function() {
           var tag = btn.getAttribute("data-tag");
           var idx = tagDraft.indexOf(tag);
-          if (idx === -1) { tagDraft.push(tag); lastShown = tag; }
-          else { tagDraft.splice(idx, 1); if (lastShown === tag) lastShown = null; }
+          if (idx === -1) {
+            // Selecting a specific type clears "以上都不像" and its note
+            var noneIdx = tagDraft.indexOf(NONE_OF_ABOVE);
+            if (noneIdx !== -1) tagDraft.splice(noneIdx, 1);
+            e.distortion_note = "";
+            tagDraft.push(tag);
+            lastShown = tag;
+          } else {
+            tagDraft.splice(idx, 1);
+            if (lastShown === tag) lastShown = null;
+          }
           btn.classList.toggle("active");
+          syncNoneButton();
           updateExplain();
+          render(); // note input appears/disappears with the selection
         });
+      });
+
+      if (noneBtn) noneBtn.addEventListener("click", function() {
+        if (hasNone()) {
+          var ni = tagDraft.indexOf(NONE_OF_ABOVE);
+          if (ni !== -1) tagDraft.splice(ni, 1);
+        } else {
+          tagDraft.length = 0;
+          tagDraft.push(NONE_OF_ABOVE);
+          lastShown = null;
+        }
+        detailTagGroup.querySelectorAll(".tag-btn").forEach(function(b) { b.classList.remove("active"); });
+        syncNoneButton();
+        updateExplain();
+        render();
       });
 
       var detailTagClear = document.getElementById("detail-tag-clear");
       if (detailTagClear) detailTagClear.addEventListener("click", function() {
         tagDraft.length = 0;
+        e.distortion_note = "";
         lastShown = null;
         detailTagGroup.querySelectorAll(".tag-btn").forEach(function(b) { b.classList.remove("active"); });
+        syncNoneButton();
         updateExplain();
+        render();
       });
 
+      // Optional note input (only present when "以上都不像" is active)
+      var noteInput = document.getElementById("detail-distortion-note");
+      if (noteInput) {
+        noteInput.addEventListener("input", function() {
+          e.distortion_note = noteInput.value;
+        });
+      }
+
+      syncNoneButton();
       updateExplain();
     }
 

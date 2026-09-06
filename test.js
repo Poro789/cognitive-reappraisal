@@ -149,6 +149,18 @@ T.setEntries([entry2]);
 text = T.buildExportText(["test-2"]);
 assert(!text.includes("认知扭曲类型："), "export omits empty distortion");
 
+// 5b. "以上都不像" without a note
+const entryNone = Object.assign({}, entry, { id: "test-none", cognitive_distortion: ["以上都不像"], distortion_note: "" });
+T.setEntries([entryNone]);
+text = T.buildExportText(["test-none"]);
+assert(text.includes("认知扭曲类型：以上都不像（用户判断不属于常见认知扭曲）"), "export none-of-above without note");
+
+// 5c. "以上都不像" with a user note
+const entryNoneNote = Object.assign({}, entry, { id: "test-none-note", cognitive_distortion: ["以上都不像"], distortion_note: "我觉得运气对我特别差" });
+T.setEntries([entryNoneNote]);
+text = T.buildExportText(["test-none-note"]);
+assert(text.includes("认知扭曲类型：以上都不像（用户描述：我觉得运气对我特别差）"), "export none-of-above with note");
+
 // 6. buildExportText with followup
 const entry3 = Object.assign({}, entry, {
   id: "test-3",

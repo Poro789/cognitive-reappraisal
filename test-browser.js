@@ -183,11 +183,28 @@ async function runAtSize(width, height) {
       assert(explain && explain.textContent.includes("读心术"), "explanation shows tag name");
       assert(explain && explain.textContent.includes("在没有证据的情况下"), "explanation shows description");
       assert(explain && explain.textContent.includes("他没回我消息"), "explanation shows example");
-      // Deselect: panel should hide
+      // Deselect: panel should hide (re-query: the step re-renders on tag change)
       tagBtn.click();
       await wait(100);
-      assert(explain.hidden, "tag explanation panel hidden after deselecting");
-      // Skip the tag step
+      const explain2 = document.getElementById("tag-explain");
+      assert(explain2 && explain2.hidden, "tag explanation panel hidden after deselecting");
+
+      // "以上都不像" flow: select it, note input appears, type a note, then clear via skip
+      const noneBtn = document.getElementById("btn-none-above");
+      assert(noneBtn, "以上都不像 button exists");
+      noneBtn.click();
+      await wait(150);
+      const noteInput = document.getElementById("wiz-distortion-note");
+      assert(noteInput, "optional note input appears when 以上都不像 selected");
+      noteInput.value = "我觉得运气对我特别差";
+      noteInput.dispatchEvent(new Event("input", { bubbles: true }));
+      // Selecting a specific tag should clear "以上都不像" and the note
+      tagBtn.click();
+      await wait(150);
+      assert(document.getElementById("wiz-distortion-note") === null, "note input hidden after picking a specific tag");
+      // Now clear everything via skip
+      tagBtn.click();
+      await wait(100);
       click("btn-skip-tag");
       await wait(150);
 
@@ -269,6 +286,25 @@ async function runAtSize(width, height) {
       assert(document.body.textContent.includes("他一定对我有意见（修改版）"), "inline edit saved");
       const storedAfterEdit = JSON.parse(localStorage.getItem("cognitive-reappraisal-entries"));
       assert(storedAfterEdit[0].automatic_thought === "他一定对我有意见（修改版）", "inline edit persisted to localStorage");
+
+      // Detail: edit cognitive distortion -> 以上都不像 + note, save, verify persisted
+      const distField = document.querySelector('.detail-editable[data-field="cognitive_distortion"]');
+      assert(distField, "cognitive distortion field editable in detail");
+      distField.click();
+      await wait(150);
+      const dNone = document.getElementById("detail-none-above");
+      assert(dNone, "以上都不像 button in detail tag editor");
+      dNone.click();
+      await wait(150);
+      const dNote = document.getElementById("detail-distortion-note");
+      assert(dNote, "note input appears in detail when 以上都不像 selected");
+      dNote.value = "我觉得事情应该更公平";
+      dNote.dispatchEvent(new Event("input", { bubbles: true }));
+      click("edit-save");
+      await wait(150);
+      const storedDist = JSON.parse(localStorage.getItem("cognitive-reappraisal-entries"))[0];
+      assert(storedDist.cognitive_distortion.indexOf("以上都不像") !== -1, "detail 以上都不像 persisted");
+      assert(storedDist.distortion_note === "我觉得事情应该更公平", "detail distortion note persisted");
 
       click("btn-detail-back");
       await wait(150);
