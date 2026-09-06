@@ -1,5 +1,7 @@
 # 思维记录 · Cognitive Reappraisal
 
+> **在线体验：** <https://poro789.github.io/cognitive-reappraisal/> —— 点开即用，数据只存在你自己的浏览器里。
+
 一个**纯离线、单文件**的认知重评（cognitive reappraisal）练习记录工具，基于认知行为疗法（CBT）中经典的「七栏思维记录表」（Thought Record，Beck 传统 / Padesky 1983）改编。
 
 它不是一个要发明新方法的项目，而是把已经过临床验证的标准思维记录表，做成一个**离线、私密、专为「最后一步导出给 AI 辅助审查」优化**的数字化工具。
@@ -15,7 +17,8 @@
 
 ## 使用
 
-直接用浏览器打开 [`index.html`](index.html) 即可，无需安装或构建。
+- **在线版**：<https://poro789.github.io/cognitive-reappraisal/>（GitHub Pages，点开即用）
+- **本地版**：直接用浏览器打开 [`index.html`](index.html) 即可，无需安装或构建。
 
 记录流程：**情境 → 自动想法 → 相信程度 → 情绪 → 认知扭曲（可选）→ 支持/反对证据 → 替代想法 → 重新相信程度 → 重新情绪强度**，最后看到「之前 → 之后」的强度对比。
 
