@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>思维记录</title>
+<style>
+:root {
+  --ink: #1c2428;
+  --paper: #f4f3ef;
+  --surface: #ffffff;
+  --accent: #3d5a6c;
+  --accent-soft: #e8edf0;
+  --muted: #8a9296;
+  --line: #e2e0da;
+  --radius: 6px;
+  --touch: 44px;
+  --max-width: 640px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ---------- Header ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0 18px;
+  font-size: 15px;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #34505f; }
+.btn-primary:active { background: #2c4452; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-ghost:hover { background: var(--accent-soft); }
+
+.btn-text {
+  background: transparent;
+  color: var(--muted);
+  padding: 0 12px;
+}
+.btn-text:hover { color: var(--ink); }
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- List ---------- */
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.list-toolbar .count {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* In selection mode the count sits between two buttons; keep it from shrinking */
+.list-toolbar .count {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.entry-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 14px 14px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.entry-card:hover { border-color: var(--accent); }
+.entry-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.entry-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.entry-check {
+  flex-shrink: 0;
+  width: var(--touch);
+  height: var(--touch);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--muted);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  background: var(--surface);
+  transition: background 0.15s, border-color 0.15s;
+}
+.checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.checkbox:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.entry-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-topline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.entry-num {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.entry-date {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-situation {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.entry-meta .emotion {
+  color: var(--ink);
+}
+
+.entry-meta .intensity-change {
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-followup {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-state h2 {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.empty-state p {
+  font-size: 14px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* ---------- Wizard ---------- */
+.wizard {
+  padding-bottom: 100px;
+}
+
+.wizard-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.wizard-step {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.wizard-field {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-prompt {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.wizard-hint {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.wizard-example {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  line-height: 1.6;
+}
+
+.wizard-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+.wizard-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.wizard-input-line {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 10px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.wizard-input-line:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Slider */
+.slider-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+}
+
+.slider-value {
+  text-align: center;
+  font-size: 40px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider-track {
+  position: relative;
+  height: var(--touch);
+  display: flex;
+  align-items: center;
+}
+
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+input[type="range"].slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+input[type="range"].slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* Distortion tags */
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-btn {
+  min-height: var(--touch);
+  padding: 0 16px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tag-btn:hover { border-color: var(--accent); }
+.tag-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.tag-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tag-explain {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-top: 14px;
+  animation: fadeIn 0.2s ease;
+}
+
+.tag-explain-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tag-explain-desc {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tag-explain-example {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  line-height: 1.6;
+}
+
+.skip-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 0 12px;
+  min-height: var(--touch);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--muted);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.skip-link:hover { color: var(--ink); }
+.skip-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Review screen */
+.review-compare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 0;
+}
+
+.review-num {
+  text-align: center;
+}
+.review-num .val {
+  font-size: 48px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.review-num .label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.review-arrow {
+  font-size: 28px;
+  color: var(--muted);
+}
+
+.review-summary {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.review-summary strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.review-next {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-left: 2px solid var(--line);
+}
+
+.review-next-title {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.review-next-list {
+  list-style: none;
+}
+
+.review-next-list li {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  padding-left: 14px;
+  position: relative;
+  margin-bottom: 8px;
+}
+.review-next-list li:last-child { margin-bottom: 0; }
+.review-next-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.review-next-list strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Wizard bottom nav */
+.wizard-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.wizard-nav .btn {
+  flex: 1;
+}
+
+/* ---------- Detail / Followup ---------- */
+.detail {
+  padding-bottom: 100px;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.detail-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
+}
+
+.detail-value {
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.detail-value.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Editable detail fields */
+.detail-editable {
+  cursor: text;
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  margin: -6px -8px;
+  transition: background 0.15s;
+}
+.detail-editable:hover {
+  background: var(--accent-soft);
+}
+.detail-editable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detail-edit-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  resize: vertical;
+}
+.detail-edit-input:focus {
+  outline: none;
+}
+
+.detail-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Slider inside detail */
+.detail-slider-wrap {
+  padding: 4px 0;
+}
+.detail-slider-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.followup-box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.followup-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  line-height: 1.6;
+}
+
+.followup-box textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+.followup-box textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.followup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 40, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .modal-overlay { align-items: center; }
+}
+
+.modal {
+  background: var(--paper);
+  width: 100%;
+  max-width: var(--max-width);
+  max-height: 85vh;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.25s ease;
+}
+
+@media (min-width: 768px) {
+  .modal {
+    border-radius: 12px;
+    animation: fadeIn 0.2s ease;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-close {
+  width: var(--touch);
+  height: var(--touch);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.modal-close:hover { background: var(--accent-soft); color: var(--ink); }
+.modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.export-textarea {
+  width: 100%;
+  min-height: 300px;
+  padding: 14px;
+  font-size: 13px;
+  font-family: "SF Mono", "Consolas", "Menlo", monospace;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.export-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.modal-footer {
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+}
+
+.modal-footer .btn {
+  width: 100%;
+}
+
+/* ---------- Desktop ---------- */
+@media (min-width: 768px) {
+  .container {
+    padding: 0 24px;
+  }
+  .app-header {
+    padding: 28px 0 20px;
+  }
+  .wizard {
+    padding-bottom: 40px;
+  }
+  .wizard-nav {
+    position: static;
+    border-top: none;
+    padding: 24px 0 0;
+    max-width: var(--max-width);
+    margin: 0 auto;
+  }
+  .detail {
+    padding-bottom: 40px;
+  }
+}
+
+/* Selection mode: hide card tap, show checkbox emphasis */
+body.selecting .entry-card {
+  cursor: default;
+}
+body.selecting .entry-check {
+  cursor: pointer;
+}
+
+
+
+/* ---------- Confirm dialog ---------- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 36, 40, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+  animation: fadeIn 0.15s ease;
+}
+
+.confirm-box {
+  background: var(--paper);
+  border-radius: 10px;
+  max-width: 340px;
+  width: 100%;
+  padding: 22px 20px 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+}
+
+.confirm-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.confirm-msg {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+.confirm-actions .btn { flex: 1; }
+
+/* ---------- Selection toolbar extras ---------- */
+.btn-select-all {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-family: inherit;
+  min-height: var(--touch);
+  padding: 0 6px;
+  cursor: pointer;
+}
+.btn-select-all:hover { text-decoration: underline; }
+.btn-select-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Delete ---------- */
+.btn-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-family: inherit;
+  min-height: var(--touch);
+  min-width: var(--touch);
+  cursor: pointer;
+}
+.btn-delete:hover { color: var(--ink); }
+.btn-delete:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+(function() {
+  "use strict";
+
+  // ---------- Constants ----------
+  var STORAGE_KEY = "cognitive-reappraisal-entries";
+
+  var DISTORTIONS = [
+    "灾难化", "非黑即白", "以偏概全", "读心术",
+    "贴标签", "应该式思维", "个人化", "情绪化推理", "其他/不确定"
+  ];
+
+  // Explanations for each distortion (based on Beck / Burns CBT literature)
+  var DISTORTION_INFO = {
+    "灾难化": {
+      desc: "直接跳到最坏的可能结果，并把它当成必然会发生的事。",
+      example: "这次汇报要是搞砸了，我就肯定会被开除。"
+    },
+    "非黑即白": {
+      desc: "只看极端：要么完美，要么彻底失败，看不到中间地带。",
+      example: "这次没拿第一，说明我完全不行。"
+    },
+    "以偏概全": {
+      desc: "从单一事件推出普遍结论，用一次经历概括全部。",
+      example: "被拒绝了一次，说明我永远不会被接受。"
+    },
+    "读心术": {
+      desc: "在没有证据的情况下，断定自己知道别人在想什么。",
+      example: "他没回我消息，一定是讨厌我了。"
+    },
+    "贴标签": {
+      desc: "用一个负面标签定义自己或别人的整体，而不是就事论事。",
+      example: "我搞砸了一件事，说明我这个人就是没用。"
+    },
+    "应该式思维": {
+      desc: "用僵化的\u201c应该\u201d\u201c必须\u201d要求自己或别人，达不到就自责或愤怒。",
+      example: "我应该随时都保持冷静，这么生气说明我修养很差。"
+    },
+    "个人化": {
+      desc: "把与自己无关的事情或别人的行为，归因到自己身上。",
+      example: "今天团队气氛不好，肯定是因为我昨天说的那句话。"
+    },
+    "情绪化推理": {
+      desc: "把感受当成事实：\u201c我感觉是这样，那它就是这样的。\u201d",
+      example: "我觉得自己是个负担，所以我肯定就是。"
+    },
+    "其他/不确定": {
+      desc: "说不清属于哪一种，或者以上都不太像。没关系，跳过就好。",
+      example: ""
+    }
+  };
+
+  var REVIEW_INSTRUCTION = [
+    "请你扮演一个认知重评的审查者，帮我检查下面这些思维记录。你的任务：",
+    "1. 对每一条记录，判断\u201c替代想法\u201d是否只是在回避或粉饰真实问题（滑向否认），还是站得住脚的、基于证据的重新理解。",
+    "2. 指出哪些替代想法缺乏\u201c支持证据\u201d或\u201c反对证据\u201d栏位里列出的事实支撑。",
+    "3. 如果某条记录里的情境本身指向一个可以通过实际行动解决的问题（而不是需要被重新理解的认知偏差），请明确提醒我，而不是帮我继续说服自己。",
+    "4. 如果标注了认知扭曲类型，请检查这个归类是否准确，以及替代想法有没有真正对应地纠正这种扭曲模式。",
+    "5. 如果有回填结果，请对比当初的自动想法、替代想法、和回填的实际结果，告诉我哪个想法更接近事实，这对我以后的判断有什么参考价值。",
+    "6. 请直接、诚实地指出问题，不要为了让我好受而附和我的解读。",
+    "",
+    "以下是我的记录："
+  ].join("\n");
+
+  // Field definitions for the wizard, in order.
+// Examples follow one consistent scenario (a friend not replying to a message)
+// so the user can see how the same situation flows through the whole record.
+  var WIZARD_FIELDS = [
+    {
+      key: "situation", type: "textarea", prompt: "发生了什么？",
+      hint: "只写客观事实，具体的时间、地点、人物，不要写你的解读。",
+      example: "周二早上给小夏发了条消息约周末见面，现在是周四晚上九点，她还没回。她今天上线过。"
+    },
+    {
+      key: "automatic_thought", type: "textarea", prompt: "当时脑子里冒出的第一个想法是什么？",
+      hint: "尽量用一句话原话写下来，不要修饰。",
+      example: "她一定是生我的气了，上次我说的话肯定让她不舒服了。"
+    },
+    {
+      key: "thought_belief_before", type: "slider", prompt: "你有多相信这个想法是真的？",
+      hint: "1 = 完全不信，10 = 完全相信",
+      example: "如果你八成觉得它是真的，就拖到 8。"
+    },
+    {
+      key: "emotion_label", type: "text", prompt: "这带来了什么情绪？",
+      hint: "给它起个名字，可以用常见的词，也可以自己命名。",
+      example: "\u201c焦虑\u201d\u201c担心\u201d\u201c失落\u201d\u201c委屈\u201d——哪个词最贴切就用哪个。"
+    },
+    {
+      key: "emotion_intensity_before", type: "slider", prompt: "这个情绪有多强烈？",
+      hint: "1 = 很轻微，10 = 非常强烈",
+      example: "如果这个感受已经占了你大部分心思，通常在 7 以上。"
+    },
+    {
+      key: "cognitive_distortion", type: "tags", prompt: "如果你觉得这个想法可能有某种固定的思维模式，可以选一个。",
+      hint: "点选后会显示每种模式的解释和例子。不确定也没关系，可以跳过。"
+    },
+    {
+      key: "evidence_for", type: "textarea", prompt: "有什么事实支持这个想法？",
+      hint: "只写你能观察到的事实，不是你的感受。试着写出最强有力的版本。",
+      example: "上周她约我时临时取消过一次；这一周她回我消息一直比平时慢。"
+    },
+    {
+      key: "evidence_against", type: "textarea", prompt: "有什么事实不支持这个想法？",
+      hint: "试着找一找，哪怕只有一点点。可以问自己：如果朋友遇到同样的事，我会怎么对他说？",
+      example: "她这周在赶一个截止日期，周日还提过；她以前忙的时候也回得慢，但从来没代表什么。"
+    },
+    {
+      key: "alternative_thought", type: "textarea", prompt: "综合两边的证据，有没有一个更平衡、更站得住脚的想法？",
+      hint: "不需要完全否定原来的想法，只需要让它更准确。",
+      example: "她可能正被截止日期压着，忙完会回我。如果上次的事真的有疙瘩，见面时可以直接聊。"
+    },
+    {
+      key: "thought_belief_after", type: "slider", prompt: "你有多相信这个新的想法？",
+      hint: "1 = 完全不信，10 = 完全相信",
+      example: "看完两边的证据后，这个新想法在你心里站得住几分？"
+    },
+    {
+      key: "emotion_intensity_after", type: "slider", prompt: "现在重新看这件事，情绪强度变成多少了？",
+      hint: "1 = 很轻微，10 = 非常强烈",
+      example: "通常会降几格，但不必降到 0——事情还没解决，有一点担心是正常的。"
+    }
+  ];
+
+  // ---------- State ----------
+  var state = {
+    view: "list",        // list | wizard | detail
+    entries: [],
+    wizard: null,        // { draft: {...}, step: number, editingId: null }
+    detail: null,        // { id, showFollowup: boolean }
+    selected: {},        // id -> true
+    selecting: false,
+    exportModal: false
+  };
+
+  // ---------- Storage ----------
+  function loadEntries() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) { /* ignore */ }
+    return [];
+  }
+
+  function saveEntries() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
+    } catch (e) { /* ignore */ }
+  }
+
+  // ---------- Utils ----------
+  function uid() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 9);
+  }
+
+  function formatDate(ts) {
+    var d = new Date(ts);
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    var h = String(d.getHours()).padStart(2, "0");
+    var min = String(d.getMinutes()).padStart(2, "0");
+    return y + "-" + m + "-" + day + " " + h + ":" + min;
+  }
+
+  function truncate(str, n) {
+    if (!str) return "";
+    str = str.replace(/\s+/g, " ").trim();
+    return str.length > n ? str.slice(0, n) + "…" : str;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function getEntry(id) {
+    for (var i = 0; i < state.entries.length; i++) {
+      if (state.entries[i].id === id) return state.entries[i];
+    }
+    return null;
+  }
+
+  // ---------- Export ----------
+  function buildExportText(ids) {
+    var parts = [REVIEW_INSTRUCTION, ""];
+    var selected = ids.map(getEntry).filter(Boolean);
+    selected.sort(function(a, b) { return a.created_at - b.created_at; });
+
+    selected.forEach(function(e) {
+      var lines = [];
+      lines.push("---");
+      lines.push("记录时间：" + formatDate(e.created_at));
+      lines.push("情境：" + (e.situation || "（未填写）"));
+      lines.push("自动想法：" + (e.automatic_thought || "（未填写）") + "（当时相信程度 " + e.thought_belief_before + "/10）");
+      lines.push("情绪：" + (e.emotion_label || "（未命名）") + "，强度 " + e.emotion_intensity_before + "/10");
+      if (e.cognitive_distortion && e.cognitive_distortion.length > 0) {
+        lines.push("认知扭曲类型：" + e.cognitive_distortion.join("、"));
+      }
+      lines.push("支持这个想法的证据：" + (e.evidence_for || "（未填写）"));
+      lines.push("反对这个想法的证据：" + (e.evidence_against || "（未填写）"));
+      lines.push("替代想法：" + (e.alternative_thought || "（未填写）") + "（相信程度 " + e.thought_belief_after + "/10）");
+      lines.push("重新评估后情绪强度：" + e.emotion_intensity_after + "/10");
+      if (e.followup_completed && e.followup_outcome) {
+        lines.push("回填结果：" + e.followup_outcome + "（回填时间：" + formatDate(e.followup_date) + "）");
+      } else {
+        lines.push("回填结果：尚未回填");
+      }
+      lines.push("---");
+      parts.push(lines.join("\n"));
+    });
+
+    return parts.join("\n");
+  }
+
+  function copyToClipboard(text) {
+    // Prefer the async Clipboard API when available (https / secure context).
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function() {
+        // Fall through to the legacy method (common on file:// where the
+        // async API is blocked but a user-gesture execCommand still works).
+        return legacyCopy(text);
+      });
+    }
+    return legacyCopy(text);
+  }
+
+  function legacyCopy(text) {
+    return new Promise(function(resolve, reject) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
+      document.body.appendChild(ta);
+      // Select within the (still focused) element for iOS Safari
+      var range = document.createRange();
+      range.selectNodeContents(ta);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      ta.focus();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      sel.removeAllRanges();
+      document.body.removeChild(ta);
+      if (ok) resolve();
+      else reject(new Error("copy failed"));
+    });
+  }
+
+  // ---------- Render ----------
+  var app = document.getElementById("app");
+
+  function render() {
+    document.body.classList.toggle("selecting", state.selecting);
+    if (state.view === "list") renderList();
+    else if (state.view === "wizard") renderWizard();
+    else if (state.view === "detail") renderDetail();
+
+    if (state.exportModal) renderExportModal();
+  }
+
+  // ---------- List View ----------
+  function renderList() {
+    var entries = state.entries.slice().sort(function(a, b) { return b.created_at - a.created_at; });
+    var selectedCount = Object.keys(state.selected).length;
+
+    var html = "";
+    html += '<header class="app-header">';
+    html += '<h1 class="app-title">思维记录</h1>';
+    html += '</header>';
+
+    if (state.selecting) {
+      var allSelected = selectedCount === entries.length && entries.length > 0;
+      html += '<div class="list-toolbar">';
+      html += '<button class="btn btn-text" id="btn-cancel-select">取消</button>';
+      html += '<button class="btn-select-all" id="btn-select-all">' + (allSelected ? "全不选" : "全选") + '</button>';
+      html += '<span class="count">已选 ' + selectedCount + ' 条</span>';
+      html += '<button class="btn btn-primary" id="btn-export"' + (selectedCount === 0 ? ' disabled' : '') + '>导出</button>';
+      html += '</div>';
+    } else {
+      html += '<div class="list-toolbar">';
+      // 选择记录 only makes sense when there is something to select
+      if (entries.length > 0) html += '<button class="btn btn-ghost" id="btn-select-mode">选择记录</button>';
+      else html += '<span class="count"></span>';
+      html += '<button class="btn btn-primary" id="btn-new">新建</button>';
+      html += '</div>';
+    }
+
+    if (entries.length === 0) {
+      html += '<div class="empty-state">';
+      html += '<h2>还没有记录</h2>';
+      html += '<p>这是一个基于认知行为疗法的思维记录工具。当你被某个想法困住时，点\u201c新建\u201d，跟着提示一步步写下当时的情境、想法和情绪，然后试着找证据、换一个更平衡的想法。不需要一次写完，随时可以回来补充。</p>';
+      html += '</div>';
+    } else {
+      html += '<div class="entry-list">';
+      // Stable numbering: #1 is the most recent (top of the list)
+      entries.forEach(function(e, i) {
+        var isSelected = !!state.selected[e.id];
+        var emotion = e.emotion_label ? escapeHtml(e.emotion_label) : "未命名";
+        var change = e.emotion_intensity_before + "→" + e.emotion_intensity_after;
+        var followup = e.followup_completed ? "已回填" : "待回填";
+        var num = entries.length - i; // most recent = highest number
+
+        html += '<div class="entry-card' + (isSelected ? " selected" : "") + '" data-id="' + e.id + '" tabindex="0" role="button" aria-label="' + (state.selecting ? "选择记录：" : "查看记录：") + escapeHtml(truncate(e.situation, 20)) + '">';
+        if (state.selecting) {
+          html += '<span class="entry-check">';
+          html += '<input type="checkbox" class="checkbox" data-id="' + e.id + '"' + (isSelected ? " checked" : "") + ' aria-label="选择这条记录">';
+          html += '</span>';
+        }
+        html += '<div class="entry-body">';
+        html += '<div class="entry-topline">';
+        html += '<span class="entry-num">#' + num + '</span>';
+        html += '<span class="entry-date">' + formatDate(e.created_at) + '</span>';
+        html += '</div>';
+        html += '<div class="entry-situation">' + escapeHtml(truncate(e.situation, 30)) + '</div>';
+        html += '<div class="entry-meta">';
+        html += '<span class="emotion">' + emotion + '</span>';
+        html += '<span class="intensity-change">' + change + '</span>';
+        html += '</div>';
+        html += '<div class="entry-followup">' + followup + (e.followup_completed && e.followup_date ? ' · ' + formatDate(e.followup_date) : '') + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    app.innerHTML = html;
+
+    // Bind events
+    var btnNew = document.getElementById("btn-new");
+    if (btnNew) btnNew.addEventListener("click", function() { startWizard(null); });
+
+    var btnCancel = document.getElementById("btn-cancel-select");
+    if (btnCancel) btnCancel.addEventListener("click", function() {
+      state.selecting = false;
+      state.selected = {};
+      render();
+    });
+
+    var btnSelectAll = document.getElementById("btn-select-all");
+    if (btnSelectAll) btnSelectAll.addEventListener("click", function() {
+      var allSelected = Object.keys(state.selected).length === entries.length && entries.length > 0;
+      state.selected = {};
+      if (!allSelected) {
+        entries.forEach(function(en) { state.selected[en.id] = true; });
+      }
+      render();
+    });
+
+    var btnSelectMode = document.getElementById("btn-select-mode");
+    if (btnSelectMode) btnSelectMode.addEventListener("click", function() {
+      state.selecting = true;
+      render();
+    });
+
+    var btnExport = document.getElementById("btn-export");
+    if (btnExport) btnExport.addEventListener("click", function() {
+      var ids = Object.keys(state.selected);
+      if (ids.length === 0) return;
+      state.exportModal = true;
+      render();
+    });
+
+    // Entry cards
+    var cards = app.querySelectorAll(".entry-card");
+    cards.forEach(function(card) {
+      var id = card.getAttribute("data-id");
+      card.addEventListener("click", function(ev) {
+        if (state.selecting) {
+          toggleSelect(id);
+        } else {
+          openDetail(id);
+        }
+      });
+      card.addEventListener("keydown", function(ev) {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          if (state.selecting) toggleSelect(id);
+          else openDetail(id);
+        }
+      });
+    });
+
+    // Checkboxes
+    var checks = app.querySelectorAll(".checkbox");
+    checks.forEach(function(cb) {
+      cb.addEventListener("click", function(ev) {
+        ev.stopPropagation();
+        toggleSelect(cb.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function toggleSelect(id) {
+    if (state.selected[id]) delete state.selected[id];
+    else state.selected[id] = true;
+    render();
+  }
+
+  // ---------- Confirm dialog (Promise-based) ----------
+  function confirmDialog(title, message, confirmLabel) {
+    return new Promise(function(resolve) {
+      var overlay = document.createElement("div");
+      overlay.className = "confirm-overlay";
+      overlay.innerHTML =
+        '<div class="confirm-box" role="alertdialog" aria-modal="true" aria-label="' + escapeHtml(title) + '">' +
+          '<div class="confirm-title">' + escapeHtml(title) + '</div>' +
+          '<div class="confirm-msg">' + escapeHtml(message) + '</div>' +
+          '<div class="confirm-actions">' +
+            '<button class="btn btn-text" data-act="cancel">取消</button>' +
+            '<button class="btn btn-primary" data-act="ok">' + escapeHtml(confirmLabel || "确定") + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      function done(val) {
+        overlay.remove();
+        document.removeEventListener("keydown", onKey);
+        resolve(val);
+      }
+      function onKey(ev) {
+        if (ev.key === "Escape") done(false);
+        else if (ev.key === "Enter") done(true);
+      }
+      overlay.querySelector('[data-act="cancel"]').addEventListener("click", function() { done(false); });
+      overlay.querySelector('[data-act="ok"]').addEventListener("click", function() { done(true); });
+      overlay.addEventListener("click", function(ev) { if (ev.target === overlay) done(false); });
+      document.addEventListener("keydown", onKey);
+      setTimeout(function() { overlay.querySelector('[data-act="ok"]').focus(); }, 30);
+    });
+  }
+
+  // ---------- Delete entry ----------
+  function deleteEntry(id) {
+    var idx = -1;
+    for (var i = 0; i < state.entries.length; i++) {
+      if (state.entries[i].id === id) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    state.entries.splice(idx, 1);
+    saveEntries();
+  }
+
+  // ---------- Wizard ----------
+  function startWizard() {
+    var draft = {
+      situation: "",
+      automatic_thought: "",
+      thought_belief_before: 5,
+      emotion_label: "",
+      emotion_intensity_before: 5,
+      cognitive_distortion: [],
+      evidence_for: "",
+      evidence_against: "",
+      alternative_thought: "",
+      thought_belief_after: 5,
+      emotion_intensity_after: 5
+    };
+    state.wizard = { draft: draft, step: 0, editingId: null };
+    state.view = "wizard";
+    render();
+  }
+
+  function renderWizard() {
+    var w = state.wizard;
+    var total = WIZARD_FIELDS.length + 1; // +1 for review screen
+    var step = w.step;
+    var draft = w.draft;
+
+    var html = "";
+    html += '<div class="wizard">';
+    html += '<div class="wizard-top">';
+    html += '<span class="wizard-step">第 ' + (step + 1) + ' 步 / 共 ' + total + ' 步</span>';
+    html += '</div>';
+
+    if (step < WIZARD_FIELDS.length) {
+      var field = WIZARD_FIELDS[step];
+      html += '<div class="wizard-field" key="' + field.key + '">';
+      html += '<div class="wizard-prompt">' + escapeHtml(field.prompt) + '</div>';
+      if (field.hint) html += '<div class="wizard-hint">' + escapeHtml(field.hint) + '</div>';
+      if (field.example) html += '<div class="wizard-example">例：' + escapeHtml(field.example) + '</div>';
+
+      if (field.type === "textarea") {
+        html += '<textarea class="wizard-input" id="wiz-input" placeholder="在这里写…" aria-label="' + escapeHtml(field.prompt) + '">' + escapeHtml(draft[field.key]) + '</textarea>';
+      } else if (field.type === "text") {
+        html += '<input type="text" class="wizard-input-line" id="wiz-input" placeholder="在这里写…" value="' + escapeHtml(draft[field.key]) + '" aria-label="' + escapeHtml(field.prompt) + '">';
+      } else if (field.type === "slider") {
+        var val = draft[field.key];
+        html += '<div class="slider-wrap">';
+        html += '<div class="slider-value" id="slider-value">' + val + '</div>';
+        html += '<div class="slider-track">';
+        html += '<input type="range" class="slider" id="wiz-slider" min="1" max="10" step="1" value="' + val + '" aria-label="' + escapeHtml(field.prompt) + '">';
+        html += '</div>';
+        html += '<div class="slider-labels"><span>1</span><span>10</span></div>';
+        html += '</div>';
+      } else if (field.type === "tags") {
+        html += '<div class="tag-group" id="tag-group">';
+        DISTORTIONS.forEach(function(d) {
+          var active = draft.cognitive_distortion.indexOf(d) !== -1;
+          html += '<button type="button" class="tag-btn' + (active ? " active" : "") + '" data-tag="' + escapeHtml(d) + '">' + escapeHtml(d) + '</button>';
+        });
+        html += '</div>';
+        html += '<div class="tag-explain" id="tag-explain" hidden></div>';
+        html += '<button type="button" class="skip-link" id="btn-skip-tag">跳过，不确定</button>';
+      }
+
+      html += '</div>';
+    } else {
+      // Review screen
+      var before = draft.emotion_intensity_before;
+      var after = draft.emotion_intensity_after;
+      html += '<div class="wizard-field">';
+      html += '<div class="wizard-prompt">这次练习带来的变化</div>';
+      html += '<div class="review-compare">';
+      html += '<div class="review-num"><div class="val">' + before + '</div><div class="label">之前</div></div>';
+      html += '<div class="review-arrow">→</div>';
+      html += '<div class="review-num"><div class="val">' + after + '</div><div class="label">之后</div></div>';
+      html += '</div>';
+      html += '<div class="review-summary">';
+      html += '<strong>情境：</strong>' + escapeHtml(truncate(draft.situation, 50)) + '<br>';
+      html += '<strong>自动想法：</strong>' + escapeHtml(truncate(draft.automatic_thought, 50)) + '<br>';
+      html += '<strong>替代想法：</strong>' + escapeHtml(truncate(draft.alternative_thought, 50));
+      html += '</div>';
+      html += '<div class="review-next">';
+      html += '<div class="review-next-title">接下来</div>';
+      html += '<ul class="review-next-list">';
+      html += '<li><strong>过几天回来回填。</strong>等这件事有了下文（比如对方回了消息、会议结束了），花一分钟记下实际发生了什么、哪个想法更接近事实。不用急，几天到一两周都行，不填也没关系。</li>';
+      html += '<li><strong>想听听外部视角时，可以导出给 AI 审查。</strong>在列表里点\u201c选择记录\u201d，勾选这条，点\u201c导出\u201d，把文字发给 AI，让它诚实地帮你看看替代想法是不是站得住脚。</li>';
+      html += '</ul>';
+      html += '</div>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Bottom nav
+    html += '<div class="wizard-nav">';
+    if (step < WIZARD_FIELDS.length) {
+      html += '<button class="btn btn-ghost" id="btn-wiz-prev">' + (step === 0 ? "取消" : "上一步") + '</button>';
+      html += '<button class="btn btn-primary" id="btn-wiz-next">下一步</button>';
+    } else {
+      html += '<button class="btn btn-ghost" id="btn-wiz-prev">返回修改</button>';
+      html += '<button class="btn btn-primary" id="btn-wiz-save">保存</button>';
+    }
+    html += '</div>';
+
+    app.innerHTML = html;
+
+    // Bind events
+    var btnPrev = document.getElementById("btn-wiz-prev");
+    if (btnPrev) btnPrev.addEventListener("click", function() {
+      if (step === 0) {
+        // Leaving from the first step discards the whole draft — confirm if anything was written
+        if (draftHasContent(w.draft)) {
+          confirmDialog("放弃这条记录？", "你填写的内容还没有保存，离开后就不会保留了。", "放弃").then(function(ok) {
+            if (!ok) return;
+            state.view = "list";
+            state.wizard = null;
+            render();
+          });
+        } else {
+          state.view = "list";
+          state.wizard = null;
+          render();
+        }
+      } else {
+        saveCurrentField();
+        w.step--;
+        render();
+      }
+    });
+
+    var btnNext = document.getElementById("btn-wiz-next");
+    if (btnNext) btnNext.addEventListener("click", function() {
+      saveCurrentField();
+      w.step++;
+      render();
+    });
+
+    var btnSave = document.getElementById("btn-wiz-save");
+    if (btnSave) btnSave.addEventListener("click", saveWizard);
+
+    // Input bindings
+    var input = document.getElementById("wiz-input");
+    if (input) {
+      input.addEventListener("input", function() {
+        var field = WIZARD_FIELDS[step];
+        draft[field.key] = input.value;
+      });
+      // Focus
+      setTimeout(function() { input.focus(); }, 50);
+    }
+
+    var slider = document.getElementById("wiz-slider");
+    if (slider) {
+      slider.addEventListener("input", function() {
+        var field = WIZARD_FIELDS[step];
+        draft[field.key] = parseInt(slider.value, 10);
+        document.getElementById("slider-value").textContent = slider.value;
+      });
+    }
+
+    // Tags
+    var tagGroup = document.getElementById("tag-group");
+    if (tagGroup) {
+      var tagExplain = document.getElementById("tag-explain");
+      var lastShownTag = null;
+
+      function updateTagExplain() {
+        if (!tagExplain) return;
+        // Show info for the most recently selected tag
+        var shown = null;
+        if (lastShownTag && draft.cognitive_distortion.indexOf(lastShownTag) !== -1) {
+          shown = lastShownTag;
+        } else if (draft.cognitive_distortion.length > 0) {
+          shown = draft.cognitive_distortion[draft.cognitive_distortion.length - 1];
+        }
+        if (!shown) {
+          tagExplain.hidden = true;
+          tagExplain.innerHTML = "";
+          return;
+        }
+        var info = DISTORTION_INFO[shown];
+        if (!info) {
+          tagExplain.hidden = true;
+          return;
+        }
+        var h = '<div class="tag-explain-title">' + escapeHtml(shown) + '</div>';
+        h += '<div class="tag-explain-desc">' + escapeHtml(info.desc) + '</div>';
+        if (info.example) h += '<div class="tag-explain-example">例：' + escapeHtml(info.example) + '</div>';
+        tagExplain.innerHTML = h;
+        tagExplain.hidden = false;
+      }
+
+      // If resuming an edit with tags already selected, show the last one
+      if (draft.cognitive_distortion.length > 0) {
+        lastShownTag = draft.cognitive_distortion[draft.cognitive_distortion.length - 1];
+      }
+
+      var tagBtns = tagGroup.querySelectorAll(".tag-btn");
+      tagBtns.forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          var tag = btn.getAttribute("data-tag");
+          var idx = draft.cognitive_distortion.indexOf(tag);
+          if (idx === -1) {
+            draft.cognitive_distortion.push(tag);
+            lastShownTag = tag;
+          } else {
+            draft.cognitive_distortion.splice(idx, 1);
+            if (lastShownTag === tag) lastShownTag = null;
+          }
+          btn.classList.toggle("active");
+          updateTagExplain();
+        });
+      });
+
+      updateTagExplain();
+    }
+
+    var btnSkip = document.getElementById("btn-skip-tag");
+    if (btnSkip) btnSkip.addEventListener("click", function() {
+      draft.cognitive_distortion = [];
+      w.step++;
+      render();
+    });
+  }
+
+  function saveCurrentField() {
+    // Values are already saved on input events, this is a no-op safeguard
+  }
+
+  // True if the user has typed anything into the draft (sliders default to 5 and don't count)
+  function draftHasContent(d) {
+    return !!(
+      (d.situation && d.situation.trim()) ||
+      (d.automatic_thought && d.automatic_thought.trim()) ||
+      (d.emotion_label && d.emotion_label.trim()) ||
+      (d.evidence_for && d.evidence_for.trim()) ||
+      (d.evidence_against && d.evidence_against.trim()) ||
+      (d.alternative_thought && d.alternative_thought.trim()) ||
+      (d.cognitive_distortion && d.cognitive_distortion.length)
+    );
+  }
+
+  function saveWizard() {
+    var w = state.wizard;
+    var draft = w.draft;
+    var now = Date.now();
+
+    var entry = {
+      id: uid(),
+      created_at: now,
+      situation: draft.situation,
+      automatic_thought: draft.automatic_thought,
+      thought_belief_before: draft.thought_belief_before,
+      emotion_label: draft.emotion_label,
+      emotion_intensity_before: draft.emotion_intensity_before,
+      cognitive_distortion: draft.cognitive_distortion,
+      evidence_for: draft.evidence_for,
+      evidence_against: draft.evidence_against,
+      alternative_thought: draft.alternative_thought,
+      thought_belief_after: draft.thought_belief_after,
+      emotion_intensity_after: draft.emotion_intensity_after,
+      followup_completed: false,
+      followup_outcome: "",
+      followup_date: null
+    };
+    state.entries.push(entry);
+
+    saveEntries();
+    state.view = "list";
+    state.wizard = null;
+    render();
+  }
+
+  // ---------- Detail View ----------
+  function openDetail(id) {
+    state.detail = { id: id, showFollowup: false, editingField: null, tagDraft: null };
+    state.view = "detail";
+    render();
+  }
+
+  function renderDetail() {
+    var e = getEntry(state.detail.id);
+    if (!e) {
+      state.view = "list";
+      render();
+      return;
+    }
+    var editing = state.detail.editingField; // null | field key
+
+    var html = "";
+    html += '<header class="app-header">';
+    html += '<button class="btn btn-text" id="btn-detail-back">← 返回</button>';
+    html += '<h1 class="app-title">记录详情</h1>';
+    html += '<button class="btn-delete" id="btn-detail-delete" aria-label="删除这条记录">删除</button>';
+    html += '</header>';
+
+    html += '<div class="detail">';
+
+    // A read-only info line (not editable)
+    function infoSection(label, value) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-label">' + label + '</div>';
+      html += '<div class="detail-value">' + escapeHtml(value) + '</div>';
+      html += '</div>';
+    }
+
+    // An editable text field. When editing === key, show an input; otherwise a tappable value.
+    function textField(key, label, value, placeholder) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-label">' + label + '</div>';
+      if (editing === key) {
+        html += '<textarea class="detail-edit-input" id="edit-input" aria-label="' + escapeHtml(label) + '">' + escapeHtml(value || "") + '</textarea>';
+        html += '<div class="detail-edit-actions">';
+        html += '<button class="btn btn-primary" id="edit-save">保存</button>';
+        html += '<button class="btn btn-text" id="edit-cancel">取消</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="detail-value detail-editable' + (value ? "" : " empty") + '" data-field="' + key + '" tabindex="0" role="button" aria-label="编辑' + escapeHtml(label) + '">' + (value ? escapeHtml(value) : "（未填写，点击补充）") + '</div>';
+      }
+      html += '</div>';
+    }
+
+    // An editable slider field.
+    function sliderField(key, label, value) {
+      html += '<div class="detail-section">';
+      html += '<div class="detail-label">' + label + '</div>';
+      if (editing === key) {
+        html += '<div class="detail-slider-wrap">';
+        html += '<div class="detail-slider-value" id="edit-slider-value">' + value + '</div>';
+        html += '<input type="range" class="slider" id="edit-slider" min="1" max="10" step="1" value="' + value + '" aria-label="' + escapeHtml(label) + '">';
+        html += '</div>';
+        html += '<div class="detail-edit-actions">';
+        html += '<button class="btn btn-primary" id="edit-save">保存</button>';
+        html += '<button class="btn btn-text" id="edit-cancel">取消</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="detail-value detail-editable" data-field="' + key + '" tabindex="0" role="button" aria-label="编辑' + escapeHtml(label) + '">' + value + '/10</div>';
+      }
+      html += '</div>';
+    }
+
+    infoSection("记录时间", formatDate(e.created_at));
+    textField("situation", "情境", e.situation);
+    textField("automatic_thought", "自动想法", e.automatic_thought);
+    sliderField("thought_belief_before", "当时相信程度", e.thought_belief_before);
+    textField("emotion_label", "情绪", e.emotion_label);
+    sliderField("emotion_intensity_before", "情绪强度（之前）", e.emotion_intensity_before);
+
+    // Cognitive distortion: editable tag set (edits go to a draft so 取消 can revert)
+    var tagDraft = state.detail.tagDraft; // array while editing, null otherwise
+    html += '<div class="detail-section">';
+    html += '<div class="detail-label">认知扭曲类型</div>';
+    if (editing === "cognitive_distortion") {
+      html += '<div class="tag-group" id="detail-tag-group">';
+      DISTORTIONS.forEach(function(d) {
+        var active = tagDraft.indexOf(d) !== -1;
+        html += '<button type="button" class="tag-btn' + (active ? " active" : "") + '" data-tag="' + escapeHtml(d) + '">' + escapeHtml(d) + '</button>';
+      });
+      html += '</div>';
+      html += '<div class="tag-explain" id="detail-tag-explain" hidden></div>';
+      html += '<button type="button" class="skip-link" id="detail-tag-clear">清空，不选</button>';
+      html += '<div class="detail-edit-actions">';
+      html += '<button class="btn btn-primary" id="edit-save">保存</button>';
+      html += '<button class="btn btn-text" id="edit-cancel">取消</button>';
+      html += '</div>';
+    } else {
+      var tags = (e.cognitive_distortion && e.cognitive_distortion.length) ? e.cognitive_distortion.join("、") : "";
+      html += '<div class="detail-value detail-editable' + (tags ? "" : " empty") + '" data-field="cognitive_distortion" tabindex="0" role="button" aria-label="编辑认知扭曲类型">' + (tags || "（未选择，点击选择）") + '</div>';
+    }
+    html += '</div>';
+
+    textField("evidence_for", "支持这个想法的证据", e.evidence_for);
+    textField("evidence_against", "反对这个想法的证据", e.evidence_against);
+    textField("alternative_thought", "替代想法", e.alternative_thought);
+    sliderField("thought_belief_after", "相信程度（之后）", e.thought_belief_after);
+    sliderField("emotion_intensity_after", "情绪强度（之后）", e.emotion_intensity_after);
+
+    // Followup (its own inline editor; a completed followup can be re-tapped to edit)
+    html += '<div class="detail-section">';
+    html += '<div class="detail-label">回填</div>';
+    if (e.followup_completed && e.followup_outcome && !state.detail.showFollowup) {
+      html += '<div class="detail-value detail-editable" data-field="followup" tabindex="0" role="button" aria-label="编辑回填结果">' + escapeHtml(e.followup_outcome) + '</div>';
+      html += '<div class="entry-followup" style="margin-top:6px">回填于 ' + formatDate(e.followup_date) + '</div>';
+    } else if (state.detail.showFollowup) {
+      html += '<div class="followup-box">';
+      html += '<div class="followup-hint">等这件事有了下文再填最好——几天到一两周都行，不填也没关系。例：\u201c两天后她回了消息，说那周在赶截止日期。回头看，第一个想法说重了。\u201d</div>';
+      html += '<textarea id="followup-input" placeholder="后来实际发生了什么？回头看，哪个想法更接近事实？" aria-label="回填结果">' + escapeHtml(e.followup_outcome || "") + '</textarea>';
+      html += '<div class="followup-actions">';
+      html += '<button class="btn btn-primary" id="btn-followup-save">保存回填</button>';
+      html += '<button class="btn btn-text" id="btn-followup-cancel">取消</button>';
+      html += '</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="entry-followup" style="margin-bottom:10px">待回填</div>';
+      html += '<button class="btn btn-ghost" id="btn-followup-start">回填</button>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+
+    app.innerHTML = html;
+
+    // ---- Bind: back ----
+    document.getElementById("btn-detail-back").addEventListener("click", function() {
+      state.view = "list";
+      state.detail = null;
+      render();
+    });
+
+    // ---- Bind: delete ----
+    document.getElementById("btn-detail-delete").addEventListener("click", function() {
+      confirmDialog("删除这条记录？", "删除后无法恢复。", "删除").then(function(ok) {
+        if (!ok) return;
+        deleteEntry(e.id);
+        state.view = "list";
+        state.detail = null;
+        render();
+      });
+    });
+
+    // ---- Bind: field editing ----
+    var editableEls = app.querySelectorAll(".detail-editable");
+    editableEls.forEach(function(el) {
+      function startEdit() {
+        var key = el.getAttribute("data-field");
+        // Followup uses its own editor box, not the generic field-edit flow
+        if (key === "followup") {
+          state.detail.showFollowup = true;
+          render();
+          return;
+        }
+        state.detail.editingField = key;
+        // For tags, copy current value into a draft so 取消 can revert
+        if (key === "cognitive_distortion") {
+          state.detail.tagDraft = (e.cognitive_distortion || []).slice();
+        }
+        render();
+      }
+      el.addEventListener("click", startEdit);
+      el.addEventListener("keydown", function(ev) {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          startEdit();
+        }
+      });
+    });
+
+    var editSave = document.getElementById("edit-save");
+    var editCancel = document.getElementById("edit-cancel");
+    if (editCancel) editCancel.addEventListener("click", function() {
+      state.detail.editingField = null;
+      state.detail.tagDraft = null;
+      render();
+    });
+
+    if (editSave) {
+      editSave.addEventListener("click", function() {
+        var key = state.detail.editingField;
+        if (key === "cognitive_distortion") {
+          e.cognitive_distortion = state.detail.tagDraft.slice();
+          saveEntries();
+        } else {
+          var input = document.getElementById("edit-input") || document.getElementById("edit-slider");
+          if (input) {
+            e[key] = (input.type === "range") ? parseInt(input.value, 10) : input.value;
+            saveEntries();
+          }
+        }
+        state.detail.editingField = null;
+        state.detail.tagDraft = null;
+        render();
+      });
+    }
+
+    // Slider live value display
+    var editSlider = document.getElementById("edit-slider");
+    if (editSlider) {
+      editSlider.addEventListener("input", function() {
+        document.getElementById("edit-slider-value").textContent = editSlider.value;
+      });
+    }
+
+    // Distortion tags in detail (mutate the draft + explanation)
+    var detailTagGroup = document.getElementById("detail-tag-group");
+    if (detailTagGroup) {
+      var detailExplain = document.getElementById("detail-tag-explain");
+      var tagDraft = state.detail.tagDraft;
+      var lastShown = tagDraft.length ? tagDraft[tagDraft.length - 1] : null;
+
+      function updateExplain() {
+        if (!detailExplain) return;
+        var shown = null;
+        if (lastShown && tagDraft.indexOf(lastShown) !== -1) shown = lastShown;
+        else if (tagDraft.length) shown = tagDraft[tagDraft.length - 1];
+        if (!shown) { detailExplain.hidden = true; detailExplain.innerHTML = ""; return; }
+        var info = DISTORTION_INFO[shown];
+        if (!info) { detailExplain.hidden = true; return; }
+        var h = '<div class="tag-explain-title">' + escapeHtml(shown) + '</div>';
+        h += '<div class="tag-explain-desc">' + escapeHtml(info.desc) + '</div>';
+        if (info.example) h += '<div class="tag-explain-example">例：' + escapeHtml(info.example) + '</div>';
+        detailExplain.innerHTML = h;
+        detailExplain.hidden = false;
+      }
+
+      detailTagGroup.querySelectorAll(".tag-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          var tag = btn.getAttribute("data-tag");
+          var idx = tagDraft.indexOf(tag);
+          if (idx === -1) { tagDraft.push(tag); lastShown = tag; }
+          else { tagDraft.splice(idx, 1); if (lastShown === tag) lastShown = null; }
+          btn.classList.toggle("active");
+          updateExplain();
+        });
+      });
+
+      var detailTagClear = document.getElementById("detail-tag-clear");
+      if (detailTagClear) detailTagClear.addEventListener("click", function() {
+        tagDraft.length = 0;
+        lastShown = null;
+        detailTagGroup.querySelectorAll(".tag-btn").forEach(function(b) { b.classList.remove("active"); });
+        updateExplain();
+      });
+
+      updateExplain();
+    }
+
+    // ---- Bind: followup ----
+    var btnFollowupStart = document.getElementById("btn-followup-start");
+    if (btnFollowupStart) btnFollowupStart.addEventListener("click", function() {
+      state.detail.showFollowup = true;
+      render();
+    });
+
+    var btnFollowupCancel = document.getElementById("btn-followup-cancel");
+    if (btnFollowupCancel) btnFollowupCancel.addEventListener("click", function() {
+      state.detail.showFollowup = false;
+      render();
+    });
+
+    var btnFollowupSave = document.getElementById("btn-followup-save");
+    if (btnFollowupSave) btnFollowupSave.addEventListener("click", function() {
+      var val = document.getElementById("followup-input").value.trim();
+      if (!val) return;
+      e.followup_completed = true;
+      e.followup_outcome = val;
+      // Keep the original date when re-editing; only stamp on first completion
+      if (!e.followup_date) e.followup_date = Date.now();
+      saveEntries();
+      state.detail.showFollowup = false;
+      render();
+    });
+  }
+
+  // ---------- Export Modal ----------
+  function renderExportModal() {
+    var ids = Object.keys(state.selected);
+    var text = buildExportText(ids);
+
+    var overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "export-modal";
+    overlay.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-label="导出记录">' +
+        '<div class="modal-header">' +
+          '<span class="modal-title">导出选中记录</span>' +
+          '<button class="modal-close" id="btn-modal-close" aria-label="关闭">×</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<textarea class="export-textarea" id="export-text" readonly>' + escapeHtml(text) + '</textarea>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn btn-primary" id="btn-copy">复制到剪贴板</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    document.getElementById("btn-modal-close").addEventListener("click", closeExportModal);
+    overlay.addEventListener("click", function(ev) {
+      if (ev.target === overlay) closeExportModal();
+    });
+
+    document.getElementById("btn-copy").addEventListener("click", function() {
+      var btn = this;
+      function showCopied() {
+        btn.textContent = "已复制";
+        btn.disabled = true;
+        setTimeout(function() {
+          btn.textContent = "复制到剪贴板";
+          btn.disabled = false;
+        }, 2000);
+      }
+      copyToClipboard(text).then(showCopied).catch(function() {
+        // Last resort: select the textarea so the user can copy manually
+        var ta = document.getElementById("export-text");
+        ta.focus();
+        ta.select();
+        btn.textContent = "请手动复制 (Ctrl+C)";
+        setTimeout(function() { btn.textContent = "复制到剪贴板"; }, 3000);
+      });
+    });
+
+    // Focus
+    setTimeout(function() {
+      document.getElementById("btn-modal-close").focus();
+    }, 50);
+  }
+
+  function closeExportModal() {
+    state.exportModal = false;
+    var modal = document.getElementById("export-modal");
+    if (modal) modal.remove();
+  }
+
+  // Escape key closes modal
+  document.addEventListener("keydown", function(ev) {
+    if (ev.key === "Escape" && state.exportModal) {
+      closeExportModal();
+    }
+  });
+
+  // ---------- Init ----------
+  state.entries = loadEntries();
+  render();
+
+  // Expose for automated testing (harmless in production)
+  window.__CR_TEST__ = {
+    getState: function() { return state; },
+    setEntries: function(entries) { state.entries = entries; saveEntries(); render(); },
+    buildExportText: buildExportText,
+    formatDate: formatDate,
+    truncate: truncate,
+    escapeHtml: escapeHtml
+  };
+
+})();
+</script>
+</body>
+</html>

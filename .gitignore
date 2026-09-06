@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+
+# Node (tests are dependency-free, but ignore any accidental installs)
+node_modules/
+npm-debug.log*
+
+# Test scratch output
+browser-out.txt
