@@ -555,6 +555,12 @@ input[type="range"].slider:focus-visible {
   outline: none;
   border-color: var(--accent);
 }
+.distortion-note-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
 
 /* Review screen */
 .review-compare {
@@ -1534,7 +1540,8 @@ body.selecting .entry-check {
         // Optional free-text note, only relevant when "以上都不像" is chosen
         if (noneActive) {
           html += '<div class="distortion-note-wrap">';
-          html += '<input type="text" class="distortion-note" id="wiz-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下，比如：我觉得运气对我特别差" value="' + escapeHtml(draft.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+          html += '<input type="text" class="distortion-note" id="wiz-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下" value="' + escapeHtml(draft.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+          html += '<div class="distortion-note-hint">例：我觉得运气对我特别差 / 事情应该更公平</div>';
           html += '</div>';
         }
       }
@@ -1890,7 +1897,8 @@ body.selecting .entry-check {
       html += '</div>';
       if (noneActive) {
         html += '<div class="distortion-note-wrap">';
-        html += '<input type="text" class="distortion-note" id="detail-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下，比如：我觉得运气对我特别差" value="' + escapeHtml(e.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+        html += '<input type="text" class="distortion-note" id="detail-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下" value="' + escapeHtml(e.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+        html += '<div class="distortion-note-hint">例：我觉得运气对我特别差 / 事情应该更公平</div>';
         html += '</div>';
       }
       html += '<div class="detail-edit-actions">';
