@@ -25,8 +25,38 @@ function resolveChromePath() {
   process.exit(1);
 }
 const CHROME = resolveChromePath();
-const htmlPath = path.join(__dirname, "index.html");
-const fileUrl = "file:///" + htmlPath.replace(/\\/g, "/");
+// Serve the built artifact (dist/) over a local HTTP server. ES modules are
+// blocked under file:// by CORS, so we need http:// for the E2E run.
+const distDir = path.join(__dirname, "dist");
+if (!fs.existsSync(path.join(distDir, "index.html"))) {
+  console.error("FAIL: dist/index.html not found. Run `npm run build` before `npm run test:e2e`.");
+  process.exit(1);
+}
+
+const MIME = {
+  ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
+  ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png"
+};
+function startServer() {
+  return new Promise((resolve) => {
+    const server = http.createServer((req, res) => {
+      let urlPath = decodeURIComponent(req.url.split("?")[0]);
+      if (urlPath === "/") urlPath = "/index.html";
+      const filePath = path.join(distDir, urlPath);
+      // Prevent path traversal
+      if (!filePath.startsWith(distDir)) { res.writeHead(403); res.end(); return; }
+      fs.readFile(filePath, (err, data) => {
+        if (err) { res.writeHead(404); res.end("Not found"); return; }
+        const ext = path.extname(filePath).toLowerCase();
+        res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+        res.end(data);
+      });
+    });
+    server.listen(0, "127.0.0.1", () => {
+      resolve({ server, port: server.address().port });
+    });
+  });
+}
 
 // Minimal WebSocket client (Node 22+ has global WebSocket)
 function connectWebSocket(url) {
@@ -126,20 +156,20 @@ async function launchChrome() {
   return { chrome, ws };
 }
 
-async function runAtSize(width, height, ws) {
+async function runAtSize(width, height, ws, pageUrl) {
   // Force exact viewport
   sendMsg(ws, 0, "Emulation.setDeviceMetricsOverride", {
     width: width, height: height, deviceScaleFactor: 2, mobile: width < 768
   });
 
-  // Navigate to the file. For the first viewport the profile is fresh (no
-  // localStorage). For subsequent viewports we need to clear localStorage
-  // from within the file:// origin (about:blank can't access it).
-  sendMsg(ws, 2, "Page.navigate", { url: fileUrl });
+  // Navigate to the app. For the first viewport the profile is fresh (no
+  // localStorage). For subsequent viewports we clear localStorage from
+  // within the page origin.
+  sendMsg(ws, 2, "Page.navigate", { url: pageUrl });
   await new Promise(r => setTimeout(r, 1000));
   // Clear any leftover data from a previous viewport run
   await evaluate(ws, 3, "localStorage.clear()");
-  sendMsg(ws, 4, "Page.navigate", { url: fileUrl });
+  sendMsg(ws, 4, "Page.navigate", { url: pageUrl });
   await new Promise(r => setTimeout(r, 1000));
 
   const testScript = `
@@ -347,7 +377,9 @@ async function runAtSize(width, height, ws) {
       fu.dispatchEvent(new Event("input", { bubbles: true }));
       click("btn-followup-save");
       await wait(150);
-      assert(document.body.textContent.includes("已回填"), "followup saved");
+      // After saving, the detail view shows the outcome text + "回填于" date.
+      // "已回填" only appears on the list card, so assert on the detail view.
+      assert(document.body.textContent.includes("后来发现他那天在赶一个紧急项目") && document.body.textContent.includes("回填于"), "followup saved");
 
       // Re-edit a completed followup: tap it, change, save
       const fuEditable = document.querySelector('.detail-editable[data-field="followup"]');
@@ -406,7 +438,7 @@ async function runAtSize(width, height, ws) {
   }
 
   // Reload the page to test localStorage persistence
-  sendMsg(ws, 11, "Page.navigate", { url: fileUrl });
+  sendMsg(ws, 11, "Page.navigate", { url: pageUrl });
   await new Promise(r => setTimeout(r, 1500));
 
   const testScript2 = `
@@ -498,17 +530,20 @@ async function main() {
     [414, 896, "iPhone Plus (414px)"],
     [1280, 800, "Desktop (1280px)"]
   ];
+  const { server, port } = await startServer();
+  const pageUrl = "http://127.0.0.1:" + port + "/";
   const { chrome, ws } = await launchChrome();
   let allPass = true;
   try {
     for (const [w, h, label] of sizes) {
       console.log("\n=== " + label + " ===");
-      const ok = await runAtSize(w, h, ws);
+      const ok = await runAtSize(w, h, ws, pageUrl);
       if (!ok) allPass = false;
     }
   } finally {
     ws.close();
     chrome.kill();
+    server.close();
     await new Promise(r => setTimeout(r, 500));
   }
   console.log(allPass ? "\nALL VIEWPORTS PASSED" : "\nSOME VIEWPORTS FAILED");

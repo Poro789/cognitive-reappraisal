@@ -4,9 +4,12 @@ Thumbs.db
 desktop.ini
 *.swp
 
-# Node (tests are dependency-free, but ignore any accidental installs)
+# Node
 node_modules/
 npm-debug.log*
+
+# Build output
+dist/
 
 # Test scratch output
 browser-out.txt

@@ -2,13 +2,13 @@
 
 > **在线体验：** <https://poro789.github.io/cognitive-reappraisal/> —— 点开即用，数据只存在你自己的浏览器里。
 
-一个**纯离线、单文件**的认知重评（cognitive reappraisal）练习记录工具，基于认知行为疗法（CBT）中经典的「七栏思维记录表」（Thought Record，Beck 传统 / Padesky 1983）改编。
+一个**纯前端、无后端**的认知重评（cognitive reappraisal）练习记录工具，基于认知行为疗法（CBT）中经典的「七栏思维记录表」（Thought Record，Beck 传统 / Padesky 1983）改编。
 
-它不是一个要发明新方法的项目，而是把已经过临床验证的标准思维记录表，做成一个**离线、私密、专为「最后一步导出给 AI 辅助审查」优化**的数字化工具。
+它不是一个要发明新方法的项目，而是把已经过临床验证的标准思维记录表，做成一个**私密、专为「最后一步导出给 AI 辅助审查」优化**的数字化工具。
 
 ## 特点
 
-- **纯离线**：单文件 `index.html`，无任何后端、账号或网络请求。双击即可在浏览器打开使用。
+- **纯前端**：Vite + 原生 JS，无任何后端、账号或网络请求。构建产物是静态文件，部署在 GitHub Pages。
 - **本地存储**：所有数据存在浏览器 `localStorage` 里，只属于你这台设备、这个浏览器。
 - **移动端优先**：为「在情绪当下用手机记录」而设计，桌面浏览器同样可用。
 - **逐字段引导**：一次只问一个问题，降低填写门槛，减少中途放弃。
@@ -18,7 +18,8 @@
 ## 使用
 
 - **在线版**：<https://poro789.github.io/cognitive-reappraisal/>（GitHub Pages，点开即用）
-- **本地版**：直接用浏览器打开 [`index.html`](index.html) 即可，无需安装或构建。
+- **本地开发**：`npm install` 后 `npm run dev`，浏览器打开 Vite 开发服务器地址。
+- **本地构建**：`npm run build` 生成 `dist/`，可直接部署到任意静态托管。
 
 记录流程：**情境 → 自动想法 → 相信程度 → 情绪 → 认知扭曲（可选）→ 支持/反对证据 → 替代想法 → 重新相信程度 → 重新情绪强度**，最后看到「之前 → 之后」的强度对比。
 
@@ -47,9 +48,18 @@
 
 ## 技术
 
-- 单文件 HTML + 内联 CSS/JS，零依赖。
+- **Vite + 原生 JS**：零框架、零运行时依赖，ES Modules 组织代码。
+- **代码结构**：
+  - `src/constants.js` — 认知扭曲类型、审查指令、向导字段定义
+  - `src/utils.js` — 纯函数（uid / formatDate / truncate / escapeHtml / draftHasContent）
+  - `src/state.js` — 应用状态、localStorage 读写、getEntry / deleteEntry
+  - `src/export.js` — 导出文本构建、剪贴板复制
+  - `src/main.js` — 渲染与视图（列表 / 向导 / 详情 / 导出模态框）
+  - `src/styles.css` — 全部样式
 - 数据模型与标准思维记录表对齐，不自创字段。
-- 测试：`test.js`（逻辑单元测试，`node test.js`）、`test-browser.js`（无头 Chrome E2E，`node test-browser.js`，需本机 Chrome）。
+- **测试**：
+  - `npm test` — Vitest 单元测试（`src/*.test.js`，覆盖纯函数与导出逻辑）
+  - `npm run test:e2e` — 无头 Chrome E2E（`test-browser.js`，指向 `dist/` 构建产物，需先 `npm run build`，需本机 Chrome）
 
 ## 免责声明
 
