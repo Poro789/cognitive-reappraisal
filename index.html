@@ -1138,12 +1138,21 @@ body.selecting .entry-check {
   var state = {
     view: "list",        // list | wizard | detail
     entries: [],
+    entryMap: {},        // id -> entry (kept in sync with entries for O(1) lookup)
     wizard: null,        // { draft: {...}, step: number, editingId: null }
     detail: null,        // { id, showFollowup: boolean }
     selected: {},        // id -> true
     selecting: false,
     exportModal: false
   };
+
+  // Rebuild the id->entry map. Call after any structural change to entries.
+  function rebuildEntryMap() {
+    state.entryMap = {};
+    for (var i = 0; i < state.entries.length; i++) {
+      state.entryMap[state.entries[i].id] = state.entries[i];
+    }
+  }
 
   // ---------- Storage ----------
   function loadEntries() {
@@ -1160,11 +1169,40 @@ body.selecting .entry-check {
   function saveEntries() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.entries));
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      // Storage full or disabled (e.g. private browsing). Warn the user so
+      // they know the data may not persist.
+      console.warn("saveEntries failed:", e);
+      showToast("保存失败：浏览器存储不可用或已满，数据可能未保留。");
+    }
+  }
+
+  // Lightweight toast notification (auto-dismisses after 3s)
+  var toastTimer = null;
+  function showToast(msg) {
+    var existing = document.getElementById("app-toast");
+    if (existing) existing.remove();
+    var el = document.createElement("div");
+    el.id = "app-toast";
+    el.setAttribute("role", "alert");
+    el.textContent = msg;
+    el.style.cssText =
+      "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);" +
+      "background:#1c2428;color:#fff;padding:10px 18px;border-radius:6px;" +
+      "font-size:14px;z-index:300;max-width:90vw;text-align:center;" +
+      "box-shadow:0 4px 12px rgba(0,0,0,0.2);";
+    document.body.appendChild(el);
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.remove(); }, 3000);
   }
 
   // ---------- Utils ----------
   function uid() {
+    // Prefer crypto.randomUUID (secure, collision-resistant); fall back to
+    // timestamp+random for older browsers without it.
+    if (window.crypto && window.crypto.randomUUID) {
+      return window.crypto.randomUUID();
+    }
     return Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 9);
   }
 
@@ -1181,19 +1219,19 @@ body.selecting .entry-check {
   function truncate(str, n) {
     if (!str) return "";
     str = str.replace(/\s+/g, " ").trim();
-    return str.length > n ? str.slice(0, n) + "…" : str;
+    // Use Array.from to iterate by code point so surrogate pairs (emoji, etc.)
+    // are never split in half.
+    var chars = Array.from(str);
+    return chars.length > n ? chars.slice(0, n).join("") + "…" : str;
   }
 
   function escapeHtml(str) {
     if (!str) return "";
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function getEntry(id) {
-    for (var i = 0; i < state.entries.length; i++) {
-      if (state.entries[i].id === id) return state.entries[i];
-    }
-    return null;
+    return state.entryMap[id] || null;
   }
 
   // ---------- Export ----------
@@ -1206,9 +1244,9 @@ body.selecting .entry-check {
       var lines = [];
       lines.push("---");
       lines.push("记录时间：" + formatDate(e.created_at));
-      lines.push("情境：" + (e.situation || "（未填写）"));
-      lines.push("自动想法：" + (e.automatic_thought || "（未填写）") + "（当时相信程度 " + e.thought_belief_before + "/10）");
-      lines.push("情绪：" + (e.emotion_label || "（未命名）") + "，强度 " + e.emotion_intensity_before + "/10");
+      lines.push("情境：" + (e.situation || "[空]"));
+      lines.push("自动想法：" + (e.automatic_thought || "[空]") + "（当时相信程度 " + e.thought_belief_before + "/10）");
+      lines.push("情绪：" + (e.emotion_label || "[未命名]") + "，强度 " + e.emotion_intensity_before + "/10");
       if (e.cognitive_distortion && e.cognitive_distortion.length > 0) {
         if (e.cognitive_distortion.indexOf(NONE_OF_ABOVE) !== -1) {
           var note = (e.distortion_note || "").trim();
@@ -1221,9 +1259,9 @@ body.selecting .entry-check {
           lines.push("认知扭曲类型：" + e.cognitive_distortion.join("、"));
         }
       }
-      lines.push("支持这个想法的证据：" + (e.evidence_for || "（未填写）"));
-      lines.push("反对这个想法的证据：" + (e.evidence_against || "（未填写）"));
-      lines.push("替代想法：" + (e.alternative_thought || "（未填写）") + "（相信程度 " + e.thought_belief_after + "/10）");
+      lines.push("支持这个想法的证据：" + (e.evidence_for || "[空]"));
+      lines.push("反对这个想法的证据：" + (e.evidence_against || "[空]"));
+      lines.push("替代想法：" + (e.alternative_thought || "[空]") + "（相信程度 " + e.thought_belief_after + "/10）");
       lines.push("重新评估后情绪强度：" + e.emotion_intensity_after + "/10");
       if (e.followup_completed && e.followup_outcome) {
         lines.push("回填结果：" + e.followup_outcome + "（回填时间：" + formatDate(e.followup_date) + "）");
@@ -1328,7 +1366,7 @@ body.selecting .entry-check {
         var followup = e.followup_completed ? "已回填" : "待回填";
         var num = entries.length - i; // most recent = highest number
 
-        html += '<div class="entry-card' + (isSelected ? " selected" : "") + '" data-id="' + e.id + '" tabindex="0" role="button" aria-label="' + (state.selecting ? "选择记录：" : "查看记录：") + escapeHtml(truncate(e.situation, 20)) + '">';
+        html += '<div class="entry-card' + (isSelected ? " selected" : "") + '" data-id="' + e.id + '" tabindex="' + (state.selecting ? "-1" : "0") + '" role="button" aria-label="' + (state.selecting ? "选择记录：" : "查看记录：") + escapeHtml(truncate(e.situation, 20)) + '">';
         if (state.selecting) {
           html += '<span class="entry-check">';
           html += '<input type="checkbox" class="checkbox" data-id="' + e.id + '"' + (isSelected ? " checked" : "") + ' aria-label="选择这条记录">';
@@ -1388,34 +1426,8 @@ body.selecting .entry-check {
       render();
     });
 
-    // Entry cards
-    var cards = app.querySelectorAll(".entry-card");
-    cards.forEach(function(card) {
-      var id = card.getAttribute("data-id");
-      card.addEventListener("click", function(ev) {
-        if (state.selecting) {
-          toggleSelect(id);
-        } else {
-          openDetail(id);
-        }
-      });
-      card.addEventListener("keydown", function(ev) {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          if (state.selecting) toggleSelect(id);
-          else openDetail(id);
-        }
-      });
-    });
-
-    // Checkboxes
-    var checks = app.querySelectorAll(".checkbox");
-    checks.forEach(function(cb) {
-      cb.addEventListener("click", function(ev) {
-        ev.stopPropagation();
-        toggleSelect(cb.getAttribute("data-id"));
-      });
-    });
+    // Entry cards + checkboxes: use event delegation on `app` (bound once at
+    // init) instead of re-binding every card on each render.
   }
 
   function toggleSelect(id) {
@@ -1446,8 +1458,9 @@ body.selecting .entry-check {
         resolve(val);
       }
       function onKey(ev) {
+        // Only Escape cancels. Enter must NOT confirm — the confirm button
+        // (e.g. 删除) is a destructive action that requires an explicit click.
         if (ev.key === "Escape") done(false);
-        else if (ev.key === "Enter") done(true);
       }
       overlay.querySelector('[data-act="cancel"]').addEventListener("click", function() { done(false); });
       overlay.querySelector('[data-act="ok"]').addEventListener("click", function() { done(true); });
@@ -1465,6 +1478,7 @@ body.selecting .entry-check {
     }
     if (idx === -1) return;
     state.entries.splice(idx, 1);
+    delete state.entryMap[id];
     saveEntries();
   }
 
@@ -1755,7 +1769,20 @@ body.selecting .entry-check {
   }
 
   function saveCurrentField() {
-    // Values are already saved on input events, this is a no-op safeguard
+    // Values are normally saved on input events. This is a fallback safeguard:
+    // if the current step has a DOM input whose value differs from the draft
+    // (e.g. a browser that didn't fire input on paste), sync it now.
+    var w = state.wizard;
+    if (!w || w.step >= WIZARD_FIELDS.length) return;
+    var field = WIZARD_FIELDS[w.step];
+    var el = document.getElementById("wiz-input") || document.getElementById("wiz-slider");
+    if (!el) return;
+    if (field.type === "slider") {
+      var v = parseInt(el.value, 10);
+      if (v !== w.draft[field.key]) w.draft[field.key] = v;
+    } else {
+      if (el.value !== w.draft[field.key]) w.draft[field.key] = el.value;
+    }
   }
 
   // True if the user has typed anything into the draft (sliders default to 5 and don't count)
@@ -1796,6 +1823,7 @@ body.selecting .entry-check {
       followup_date: null
     };
     state.entries.push(entry);
+    state.entryMap[entry.id] = entry;
 
     saveEntries();
     state.view = "list";
@@ -1805,7 +1833,7 @@ body.selecting .entry-check {
 
   // ---------- Detail View ----------
   function openDetail(id) {
-    state.detail = { id: id, showFollowup: false, editingField: null, tagDraft: null };
+    state.detail = { id: id, showFollowup: false, editingField: null, tagDraft: null, noteDraft: null };
     state.view = "detail";
     render();
   }
@@ -1897,7 +1925,7 @@ body.selecting .entry-check {
       html += '</div>';
       if (noneActive) {
         html += '<div class="distortion-note-wrap">';
-        html += '<input type="text" class="distortion-note" id="detail-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下" value="' + escapeHtml(e.distortion_note || "") + '" aria-label="认知扭曲补充描述">';
+        html += '<input type="text" class="distortion-note" id="detail-distortion-note" maxlength="60" placeholder="（可选）用你自己的话描述一下" value="' + escapeHtml(state.detail.noteDraft || "") + '" aria-label="认知扭曲补充描述">';
         html += '<div class="distortion-note-hint">例：我觉得运气对我特别差 / 事情应该更公平</div>';
         html += '</div>';
       }
@@ -1975,6 +2003,7 @@ body.selecting .entry-check {
         // For tags, copy current value into a draft so 取消 can revert
         if (key === "cognitive_distortion") {
           state.detail.tagDraft = (e.cognitive_distortion || []).slice();
+          state.detail.noteDraft = e.distortion_note || "";
         }
         render();
       }
@@ -1992,6 +2021,7 @@ body.selecting .entry-check {
     if (editCancel) editCancel.addEventListener("click", function() {
       state.detail.editingField = null;
       state.detail.tagDraft = null;
+      state.detail.noteDraft = null;
       render();
     });
 
@@ -2000,6 +2030,7 @@ body.selecting .entry-check {
         var key = state.detail.editingField;
         if (key === "cognitive_distortion") {
           e.cognitive_distortion = state.detail.tagDraft.slice();
+          e.distortion_note = state.detail.noteDraft || "";
           saveEntries();
         } else {
           var input = document.getElementById("edit-input") || document.getElementById("edit-slider");
@@ -2010,6 +2041,7 @@ body.selecting .entry-check {
         }
         state.detail.editingField = null;
         state.detail.tagDraft = null;
+        state.detail.noteDraft = null;
         render();
       });
     }
@@ -2066,7 +2098,7 @@ body.selecting .entry-check {
             // Selecting a specific type clears "以上都不像" and its note
             var noneIdx = tagDraft.indexOf(NONE_OF_ABOVE);
             if (noneIdx !== -1) tagDraft.splice(noneIdx, 1);
-            e.distortion_note = "";
+            state.detail.noteDraft = "";
             tagDraft.push(tag);
             lastShown = tag;
           } else {
@@ -2098,7 +2130,7 @@ body.selecting .entry-check {
       var detailTagClear = document.getElementById("detail-tag-clear");
       if (detailTagClear) detailTagClear.addEventListener("click", function() {
         tagDraft.length = 0;
-        e.distortion_note = "";
+        state.detail.noteDraft = "";
         lastShown = null;
         detailTagGroup.querySelectorAll(".tag-btn").forEach(function(b) { b.classList.remove("active"); });
         syncNoneButton();
@@ -2110,7 +2142,7 @@ body.selecting .entry-check {
       var noteInput = document.getElementById("detail-distortion-note");
       if (noteInput) {
         noteInput.addEventListener("input", function() {
-          e.distortion_note = noteInput.value;
+          state.detail.noteDraft = noteInput.value;
         });
       }
 
@@ -2174,6 +2206,28 @@ body.selecting .entry-check {
       if (ev.target === overlay) closeExportModal();
     });
 
+    // Focus trap: keep Tab/Shift+Tab cycling within the modal
+    (function() {
+      var focusable = overlay.querySelectorAll("button, textarea, input, [tabindex]:not([tabindex='-1'])");
+      if (focusable.length === 0) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      overlay.addEventListener("keydown", function(ev) {
+        if (ev.key !== "Tab") return;
+        if (ev.shiftKey) {
+          if (document.activeElement === first) {
+            ev.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            ev.preventDefault();
+            first.focus();
+          }
+        }
+      });
+    })();
+
     document.getElementById("btn-copy").addEventListener("click", function() {
       var btn = this;
       function showCopied() {
@@ -2215,16 +2269,51 @@ body.selecting .entry-check {
 
   // ---------- Init ----------
   state.entries = loadEntries();
+  rebuildEntryMap();
+
+  // Event delegation for list-view cards & checkboxes (bound once).
+  // `app` is the single container that gets innerHTML-swapped on each render,
+  // so a listener on `app` survives re-renders without re-binding.
+  app.addEventListener("click", function(ev) {
+    // Checkbox click (selection mode): stopPropagation so the card handler
+    // below doesn't also fire.
+    var cb = ev.target.closest(".checkbox");
+    if (cb) {
+      ev.stopPropagation();
+      toggleSelect(cb.getAttribute("data-id"));
+      return;
+    }
+    // Card click
+    var card = ev.target.closest(".entry-card");
+    if (card) {
+      var id = card.getAttribute("data-id");
+      if (state.selecting) toggleSelect(id);
+      else openDetail(id);
+    }
+  });
+  app.addEventListener("keydown", function(ev) {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    var card = ev.target.closest(".entry-card");
+    if (card && ev.target === card) {
+      ev.preventDefault();
+      var id = card.getAttribute("data-id");
+      if (state.selecting) toggleSelect(id);
+      else openDetail(id);
+    }
+  });
+
   render();
 
   // Expose for automated testing (harmless in production)
   window.__CR_TEST__ = {
     getState: function() { return state; },
-    setEntries: function(entries) { state.entries = entries; saveEntries(); render(); },
+    setEntries: function(entries) { state.entries = entries; rebuildEntryMap(); saveEntries(); render(); },
     buildExportText: buildExportText,
     formatDate: formatDate,
     truncate: truncate,
-    escapeHtml: escapeHtml
+    escapeHtml: escapeHtml,
+    draftHasContent: draftHasContent,
+    uid: uid
   };
 
 })();
