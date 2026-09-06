@@ -186,5 +186,57 @@ const idxA = text.indexOf("记录时间：");
 const idxB = text.indexOf("记录时间：", idxA + 1);
 assert(idxA < idxB, "export sorts entries by created_at");
 
+// 9. escapeHtml escapes single quotes
+assert(T.escapeHtml("it's") === "it&#39;s", "escapeHtml single quote");
+assert(T.escapeHtml(`<a href="x" title='y'>`) === "&lt;a href=&quot;x&quot; title=&#39;y&#39;&gt;", "escapeHtml mixed quotes");
+
+// 10. truncate handles emoji (surrogate pairs) without splitting
+const emojiStr = "🎉🎊🎈🎆🎇"; // 5 emoji, each 2 UTF-16 code units
+assert(T.truncate(emojiStr, 3) === "🎉🎊🎈…", "truncate emoji by code point");
+assert(T.truncate("ab🎉cd", 3) === "ab🎉…", "truncate mixed text+emoji");
+assert(T.truncate("🎉", 1) === "🎉", "truncate single emoji fits");
+assert(T.truncate("🎉🎊", 1) === "🎉…", "truncate two emoji to one");
+
+// 11. draftHasContent
+const emptyDraft = {
+  situation: "", automatic_thought: "", emotion_label: "",
+  evidence_for: "", evidence_against: "", alternative_thought: "",
+  cognitive_distortion: []
+};
+assert(T.draftHasContent(emptyDraft) === false, "draftHasContent empty draft");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { situation: "  " })) === false, "draftHasContent whitespace-only situation");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { situation: "x" })) === true, "draftHasContent with situation");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { automatic_thought: "y" })) === true, "draftHasContent with auto thought");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { emotion_label: "z" })) === true, "draftHasContent with emotion");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { evidence_for: "e" })) === true, "draftHasContent with evidence_for");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { evidence_against: "e" })) === true, "draftHasContent with evidence_against");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { alternative_thought: "a" })) === true, "draftHasContent with alternative");
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { cognitive_distortion: ["灾难化"] })) === true, "draftHasContent with distortion");
+// Sliders default to 5 and don't count as content
+assert(T.draftHasContent(Object.assign({}, emptyDraft, { thought_belief_before: 10, emotion_intensity_before: 10 })) === false, "draftHasContent sliders alone don't count");
+
+// 12. uid uniqueness + format
+const ids = new Set();
+for (let i = 0; i < 200; i++) ids.add(T.uid());
+assert(ids.size === 200, "uid generates 200 unique ids");
+// uid should be a non-empty string
+assert(typeof T.uid() === "string" && T.uid().length > 0, "uid returns non-empty string");
+
+// 13. Export placeholder uses [空] not （未填写）
+const entryEmpty = Object.assign({}, entry, {
+  id: "empty-test",
+  situation: "", automatic_thought: "", emotion_label: "",
+  evidence_for: "", evidence_against: "", alternative_thought: ""
+});
+T.setEntries([entryEmpty]);
+text = T.buildExportText(["empty-test"]);
+assert(text.includes("情境：[空]"), "export empty situation uses [空]");
+assert(text.includes("自动想法：[空]"), "export empty auto thought uses [空]");
+assert(text.includes("情绪：[未命名]"), "export empty emotion uses [未命名]");
+assert(text.includes("支持这个想法的证据：[空]"), "export empty evidence_for uses [空]");
+assert(text.includes("反对这个想法的证据：[空]"), "export empty evidence_against uses [空]");
+assert(text.includes("替代想法：[空]"), "export empty alternative uses [空]");
+assert(!text.includes("（未填写）"), "export no longer uses （未填写）");
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
