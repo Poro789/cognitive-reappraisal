@@ -4,7 +4,27 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 
-const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+// Chrome path: override with CHROME_PATH env var or first CLI arg.
+// Defaults to common Windows / macOS / Linux locations.
+function resolveChromePath() {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const arg = process.argv[2];
+  if (arg && !arg.startsWith("-")) return arg;
+  const candidates = [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium"
+  ];
+  for (const c of candidates) {
+    try { fs.accessSync(c); return c; } catch (e) { /* not found */ }
+  }
+  console.error("FAIL: Chrome not found. Set CHROME_PATH env var or pass path as first arg.");
+  process.exit(1);
+}
+const CHROME = resolveChromePath();
 const htmlPath = path.join(__dirname, "index.html");
 const fileUrl = "file:///" + htmlPath.replace(/\\/g, "/");
 
@@ -53,18 +73,17 @@ function evaluate(ws, id, expression) {
   });
 }
 
-async function runAtSize(width, height) {
+// Launch Chrome once and return { chrome, ws }. Reused across all viewports.
+async function launchChrome() {
   const chrome = spawn(CHROME, [
     "--headless=new",
     "--disable-gpu",
     "--no-sandbox",
     "--disable-dev-shm-usage",
     "--remote-debugging-port=9222",
-    "--window-size=" + width + "," + height,
     "about:blank"
   ], { stdio: "ignore" });
 
-  // Wait for DevTools endpoint
   let target;
   for (let i = 0; i < 30; i++) {
     await new Promise(r => setTimeout(r, 500));
@@ -90,12 +109,7 @@ async function runAtSize(width, height) {
   const ws = await connectWebSocket(target.webSocketDebuggerUrl);
   await new Promise(r => ws.onopen && r());
 
-  // Force exact viewport
-  sendMsg(ws, 0, "Emulation.setDeviceMetricsOverride", {
-    width: width, height: height, deviceScaleFactor: 2, mobile: width < 768
-  });
-
-  // Enable Runtime and capture console
+  // Enable Runtime and capture console (once for the whole session)
   sendMsg(ws, 1, "Runtime.enable");
   ws.addEventListener("message", (ev) => {
     const msg = JSON.parse(ev.data);
@@ -109,8 +123,23 @@ async function runAtSize(width, height) {
   });
   await new Promise(r => setTimeout(r, 200));
 
-  // Navigate to the file
+  return { chrome, ws };
+}
+
+async function runAtSize(width, height, ws) {
+  // Force exact viewport
+  sendMsg(ws, 0, "Emulation.setDeviceMetricsOverride", {
+    width: width, height: height, deviceScaleFactor: 2, mobile: width < 768
+  });
+
+  // Navigate to the file. For the first viewport the profile is fresh (no
+  // localStorage). For subsequent viewports we need to clear localStorage
+  // from within the file:// origin (about:blank can't access it).
   sendMsg(ws, 2, "Page.navigate", { url: fileUrl });
+  await new Promise(r => setTimeout(r, 1000));
+  // Clear any leftover data from a previous viewport run
+  await evaluate(ws, 3, "localStorage.clear()");
+  sendMsg(ws, 4, "Page.navigate", { url: fileUrl });
   await new Promise(r => setTimeout(r, 1000));
 
   const testScript = `
@@ -373,9 +402,6 @@ async function runAtSize(width, height) {
     if (value1 && value1.results) value1.results.forEach(r => console.log((r.pass ? "PASS" : "FAIL") + ": " + r.msg));
     console.error("FAIL: phase 1 failed");
     if (result1 && result1.exceptionDetails) console.error(JSON.stringify(result1.exceptionDetails, null, 2));
-    ws.close();
-    chrome.kill();
-    await new Promise(r => setTimeout(r, 500));
     return false;
   }
 
@@ -449,9 +475,6 @@ const fuLine = exportText.split(String.fromCharCode(10)).find(l => l.indexOf("å›
     const fuRes = await evaluate(ws, 13, "window.__FU_LINE__ || ''");
     console.log("DEBUG followup line:", fuRes && fuRes.result ? fuRes.result.value : "(none)");
   } catch (e) { /* ignore */ }
-  ws.close();
-  chrome.kill();
-  await new Promise(r => setTimeout(r, 500));
 
   // Print phase 1 results
   value1.results.forEach(r => console.log((r.pass ? "PASS" : "FAIL") + ": " + r.msg));
@@ -475,11 +498,18 @@ async function main() {
     [414, 896, "iPhone Plus (414px)"],
     [1280, 800, "Desktop (1280px)"]
   ];
+  const { chrome, ws } = await launchChrome();
   let allPass = true;
-  for (const [w, h, label] of sizes) {
-    console.log("\n=== " + label + " ===");
-    const ok = await runAtSize(w, h);
-    if (!ok) allPass = false;
+  try {
+    for (const [w, h, label] of sizes) {
+      console.log("\n=== " + label + " ===");
+      const ok = await runAtSize(w, h, ws);
+      if (!ok) allPass = false;
+    }
+  } finally {
+    ws.close();
+    chrome.kill();
+    await new Promise(r => setTimeout(r, 500));
   }
   console.log(allPass ? "\nALL VIEWPORTS PASSED" : "\nSOME VIEWPORTS FAILED");
   process.exit(allPass ? 0 : 1);
