@@ -44,7 +44,10 @@ function startServer() {
       if (urlPath === "/") urlPath = "/index.html";
       const filePath = path.join(distDir, urlPath);
       // Prevent path traversal
-      if (!filePath.startsWith(distDir)) { res.writeHead(403); res.end(); return; }
+      const resolved = path.resolve(filePath);
+      if (!resolved.startsWith(path.resolve(distDir) + path.sep)) {
+        res.writeHead(403); res.end(); return;
+      }
       fs.readFile(filePath, (err, data) => {
         if (err) { res.writeHead(404); res.end("Not found"); return; }
         const ext = path.extname(filePath).toLowerCase();
@@ -103,14 +106,28 @@ function evaluate(ws, id, expression) {
   });
 }
 
+// Find a free TCP port on localhost.
+function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer();
+    srv.listen(0, "127.0.0.1", () => {
+      const port = srv.address().port;
+      srv.close(() => resolve(port));
+    });
+    srv.on("error", reject);
+  });
+}
+
 // Launch Chrome once and return { chrome, ws }. Reused across all viewports.
 async function launchChrome() {
+  // Use a random free port to avoid conflicts with other Chrome instances.
+  const debugPort = await getFreePort();
   const chrome = spawn(CHROME, [
     "--headless=new",
     "--disable-gpu",
     "--no-sandbox",
     "--disable-dev-shm-usage",
-    "--remote-debugging-port=9222",
+    "--remote-debugging-port=" + debugPort,
     "about:blank"
   ], { stdio: "ignore" });
 
@@ -119,7 +136,7 @@ async function launchChrome() {
     await new Promise(r => setTimeout(r, 500));
     try {
       const res = await new Promise((resolve, reject) => {
-        http.get("http://127.0.0.1:9222/json", (r) => {
+        http.get("http://127.0.0.1:" + debugPort + "/json", (r) => {
           let data = "";
           r.on("data", c => data += c);
           r.on("end", () => resolve(JSON.parse(data)));
@@ -167,10 +184,13 @@ async function runAtSize(width, height, ws, pageUrl) {
   // within the page origin.
   sendMsg(ws, 2, "Page.navigate", { url: pageUrl });
   await new Promise(r => setTimeout(r, 1000));
-  // Clear any leftover data from a previous viewport run
+  // Clear any leftover data from a previous viewport run (including wizard draft)
   await evaluate(ws, 3, "localStorage.clear()");
   sendMsg(ws, 4, "Page.navigate", { url: pageUrl });
   await new Promise(r => setTimeout(r, 1000));
+  // Ensure no resume banner is present (clean state)
+  await evaluate(ws, 5, "(function(){ var b = document.getElementById('btn-discard-draft'); if (b) b.click(); })()");
+  await new Promise(r => setTimeout(r, 200));
 
   const testScript = `
     (async () => {
@@ -191,7 +211,7 @@ async function runAtSize(width, height, ws, pageUrl) {
 
       function setInput(id, val) {
         const el = document.getElementById(id);
-        if (!el) throw new Error("missing " + id);
+        if (!el) { results.push({ pass: false, msg: "missing input: " + id }); return; }
         el.value = val;
         el.dispatchEvent(new Event("input", { bubbles: true }));
       }
@@ -199,7 +219,7 @@ async function runAtSize(width, height, ws, pageUrl) {
       function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
       function click(id) {
         const el = document.getElementById(id);
-        if (!el) throw new Error("missing " + id);
+        if (!el) { results.push({ pass: false, msg: "missing element: " + id }); return; }
         el.click();
       }
 
@@ -215,8 +235,10 @@ async function runAtSize(width, height, ws, pageUrl) {
 
       const slider = document.getElementById("wiz-slider");
       assert(slider, "slider exists");
-      slider.value = "8";
-      slider.dispatchEvent(new Event("input", { bubbles: true }));
+      if (slider) {
+        slider.value = "8";
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       const sv = document.getElementById("slider-value");
       assert(sv && sv.textContent === "8", "slider value updated");
       next();
@@ -227,15 +249,18 @@ async function runAtSize(width, height, ws, pageUrl) {
       await wait(150);
 
       const slider2 = document.getElementById("wiz-slider");
-      slider2.value = "7";
-      slider2.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(slider2, "intensity-before slider exists");
+      if (slider2) {
+        slider2.value = "7";
+        slider2.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
       // Tag explanation panel: select a tag, verify explanation appears
       const tagBtn = document.querySelector('.tag-btn[data-tag="读心术"]');
       assert(tagBtn, "distortion tag button exists");
-      tagBtn.click();
+      if (tagBtn) tagBtn.click();
       await wait(100);
       const explain = document.getElementById("tag-explain");
       assert(explain && !explain.hidden, "tag explanation panel visible after selecting tag");
@@ -243,7 +268,8 @@ async function runAtSize(width, height, ws, pageUrl) {
       assert(explain && explain.textContent.includes("在没有证据的情况下"), "explanation shows description");
       assert(explain && explain.textContent.includes("他没回我消息"), "explanation shows example");
       // Deselect: panel should hide (re-query: the step re-renders on tag change)
-      tagBtn.click();
+      const tagBtnDeselect = document.querySelector('.tag-btn[data-tag="读心术"]');
+      if (tagBtnDeselect) tagBtnDeselect.click();
       await wait(100);
       const explain2 = document.getElementById("tag-explain");
       assert(explain2 && explain2.hidden, "tag explanation panel hidden after deselecting");
@@ -251,47 +277,74 @@ async function runAtSize(width, height, ws, pageUrl) {
       // "以上都不像" flow: select it, note input appears, type a note, then clear via skip
       const noneBtn = document.getElementById("btn-none-above");
       assert(noneBtn, "以上都不像 button exists");
-      noneBtn.click();
+      if (noneBtn) noneBtn.click();
       await wait(150);
       const noteInput = document.getElementById("wiz-distortion-note");
       assert(noteInput, "optional note input appears when 以上都不像 selected");
-      noteInput.value = "我觉得运气对我特别差";
-      noteInput.dispatchEvent(new Event("input", { bubbles: true }));
+      if (noteInput) {
+        noteInput.value = "我觉得运气对我特别差";
+        noteInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       // Selecting a specific tag should clear "以上都不像" and the note
-      tagBtn.click();
+      const tagBtn2 = document.querySelector('.tag-btn[data-tag="读心术"]');
+      assert(tagBtn2, "distortion tag button still exists after re-render");
+      if (tagBtn2) tagBtn2.click();
       await wait(150);
       assert(document.getElementById("wiz-distortion-note") === null, "note input hidden after picking a specific tag");
       // Now clear everything via skip
-      tagBtn.click();
+      const tagBtn3 = document.querySelector('.tag-btn[data-tag="读心术"]');
+      if (tagBtn3) tagBtn3.click();
       await wait(100);
-      click("btn-skip-tag");
+      const skipBtn = document.getElementById("btn-skip-tag");
+      if (skipBtn) skipBtn.click();
       await wait(150);
 
       // Field examples: verify the evidence-for step shows an example line
       const exEl = document.querySelector(".wizard-example");
       assert(exEl && exEl.textContent.includes("例："), "field example shown in wizard");
 
-      setInput("wiz-input", "他今天确实没和我眼神接触");
+      const wizInput1 = document.getElementById("wiz-input");
+      assert(wizInput1, "evidence-for input exists");
+      if (wizInput1) {
+        wizInput1.value = "他今天确实没和我眼神接触";
+        wizInput1.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
-      setInput("wiz-input", "他昨天还夸了我的报告");
+      const wizInput2 = document.getElementById("wiz-input");
+      assert(wizInput2, "evidence-against input exists");
+      if (wizInput2) {
+        wizInput2.value = "他昨天还夸了我的报告";
+        wizInput2.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
-      setInput("wiz-input", "他可能只是在想别的事情");
+      const wizInput3 = document.getElementById("wiz-input");
+      assert(wizInput3, "alternative thought input exists");
+      if (wizInput3) {
+        wizInput3.value = "他可能只是在想别的事情";
+        wizInput3.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
       const slider3 = document.getElementById("wiz-slider");
-      slider3.value = "4";
-      slider3.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(slider3, "belief-after slider exists");
+      if (slider3) {
+        slider3.value = "4";
+        slider3.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
       const slider4 = document.getElementById("wiz-slider");
-      slider4.value = "3";
-      slider4.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(slider4, "intensity-after slider exists");
+      if (slider4) {
+        slider4.value = "3";
+        slider4.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       next();
       await wait(150);
 
@@ -306,7 +359,9 @@ async function runAtSize(width, height, ws, pageUrl) {
       assert(nextSec && nextSec.textContent.includes("回填"), "guidance mentions followup");
       assert(nextSec && nextSec.textContent.includes("导出"), "guidance mentions export for review");
 
-      click("btn-wiz-save");
+      const saveBtn = document.getElementById("btn-wiz-save");
+      assert(saveBtn, "save button exists on review screen");
+      if (saveBtn) saveBtn.click();
       await wait(150);
 
       const cards = document.querySelectorAll(".entry-card");
@@ -326,7 +381,7 @@ async function runAtSize(width, height, ws, pageUrl) {
       assert(stored && stored.length === 1, "localStorage has entry");
       assert(stored && stored[0] && stored[0].situation === "今天开会时领导没看我", "localStorage situation correct");
 
-      cards[0].click();
+      if (cards[0]) cards[0].click();
       await wait(150);
       assert(document.getElementById("btn-detail-back"), "detail view shown");
       assert(document.body.textContent.includes("他一定对我有意见"), "detail shows automatic thought");
@@ -334,13 +389,17 @@ async function runAtSize(width, height, ws, pageUrl) {
       // Direct inline edit: tap the 自动想法 field, change it, save
       const autoField = document.querySelector('.detail-editable[data-field="automatic_thought"]');
       assert(autoField, "automatic thought field is editable in detail");
-      autoField.click();
+      if (autoField) autoField.click();
       await wait(150);
       const editInput = document.getElementById("edit-input");
       assert(editInput, "inline edit input appears");
-      editInput.value = "他一定对我有意见（修改版）";
-      editInput.dispatchEvent(new Event("input", { bubbles: true }));
-      click("edit-save");
+      if (editInput) {
+        editInput.value = "他一定对我有意见（修改版）";
+        editInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const editSave1 = document.getElementById("edit-save");
+      assert(editSave1, "edit save button exists");
+      if (editSave1) editSave1.click();
       await wait(150);
       assert(document.body.textContent.includes("他一定对我有意见（修改版）"), "inline edit saved");
       const storedAfterEdit = JSON.parse(localStorage.getItem("cognitive-reappraisal-entries"));
@@ -349,33 +408,47 @@ async function runAtSize(width, height, ws, pageUrl) {
       // Detail: edit cognitive distortion -> 以上都不像 + note, save, verify persisted
       const distField = document.querySelector('.detail-editable[data-field="cognitive_distortion"]');
       assert(distField, "cognitive distortion field editable in detail");
-      distField.click();
+      if (distField) distField.click();
       await wait(150);
       const dNone = document.getElementById("detail-none-above");
       assert(dNone, "以上都不像 button in detail tag editor");
-      dNone.click();
+      if (dNone) dNone.click();
       await wait(150);
       const dNote = document.getElementById("detail-distortion-note");
       assert(dNote, "note input appears in detail when 以上都不像 selected");
-      dNote.value = "我觉得事情应该更公平";
-      dNote.dispatchEvent(new Event("input", { bubbles: true }));
-      click("edit-save");
+      if (dNote) {
+        dNote.value = "我觉得事情应该更公平";
+        dNote.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const editSave2 = document.getElementById("edit-save");
+      assert(editSave2, "edit save button exists (distortion)");
+      if (editSave2) editSave2.click();
       await wait(150);
       const storedDist = JSON.parse(localStorage.getItem("cognitive-reappraisal-entries"))[0];
       assert(storedDist.cognitive_distortion.indexOf("以上都不像") !== -1, "detail 以上都不像 persisted");
       assert(storedDist.distortion_note === "我觉得事情应该更公平", "detail distortion note persisted");
 
-      click("btn-detail-back");
+      const backBtn1 = document.getElementById("btn-detail-back");
+      assert(backBtn1, "back button exists");
+      if (backBtn1) backBtn1.click();
       await wait(150);
-      document.querySelector(".entry-card").click();
+      const card1 = document.querySelector(".entry-card");
+      assert(card1, "entry card exists for followup");
+      if (card1) card1.click();
       await wait(150);
-      click("btn-followup-start");
+      const fuStart = document.getElementById("btn-followup-start");
+      assert(fuStart, "followup start button exists");
+      if (fuStart) fuStart.click();
       await wait(150);
       const fu = document.getElementById("followup-input");
       assert(fu, "followup input exists");
-      fu.value = "后来发现他那天在赶一个紧急项目";
-      fu.dispatchEvent(new Event("input", { bubbles: true }));
-      click("btn-followup-save");
+      if (fu) {
+        fu.value = "后来发现他那天在赶一个紧急项目";
+        fu.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const fuSave1 = document.getElementById("btn-followup-save");
+      assert(fuSave1, "followup save button exists");
+      if (fuSave1) fuSave1.click();
       await wait(150);
       // After saving, the detail view shows the outcome text + "回填于" date.
       // "已回填" only appears on the list card, so assert on the detail view.
@@ -384,41 +457,62 @@ async function runAtSize(width, height, ws, pageUrl) {
       // Re-edit a completed followup: tap it, change, save
       const fuEditable = document.querySelector('.detail-editable[data-field="followup"]');
       assert(fuEditable, "completed followup is tappable to edit");
-      fuEditable.click();
+      if (fuEditable) fuEditable.click();
       await wait(150);
       const fu2 = document.getElementById("followup-input");
       assert(fu2, "followup re-edit input appears");
-      assert(fu2.value === "后来发现他那天在赶一个紧急项目", "re-edit prefills existing followup");
-      fu2.value = "后来发现他那天在赶一个紧急项目（补充：已当面澄清）";
-      fu2.dispatchEvent(new Event("input", { bubbles: true }));
-      click("btn-followup-save");
+      if (fu2) {
+        assert(fu2.value === "后来发现他那天在赶一个紧急项目", "re-edit prefills existing followup");
+        fu2.value = "后来发现他那天在赶一个紧急项目（补充：已当面澄清）";
+        fu2.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const fuSave2 = document.getElementById("btn-followup-save");
+      assert(fuSave2, "followup save button exists (re-edit)");
+      if (fuSave2) fuSave2.click();
       await wait(150);
       assert(document.body.textContent.includes("已当面澄清"), "followup re-edit saved");
       const storedFu = JSON.parse(localStorage.getItem("cognitive-reappraisal-entries"))[0];
       assert(storedFu.followup_outcome.indexOf("已当面澄清") !== -1, "followup re-edit persisted");
 
-      click("btn-detail-back");
+      const backBtn2 = document.getElementById("btn-detail-back");
+      assert(backBtn2, "back button exists (before delete)");
+      if (backBtn2) backBtn2.click();
       await wait(150);
 
       // Delete: create a second entry, then delete it
-      click("btn-new");
+      const newBtn2 = document.getElementById("btn-new");
+      assert(newBtn2, "new button exists (for delete test)");
+      if (newBtn2) newBtn2.click();
       await wait(200);
       const dTa = document.getElementById("wiz-input");
-      dTa.value = "待删除的测试记录";
-      dTa.dispatchEvent(new Event("input", { bubbles: true }));
+      assert(dTa, "wizard input exists (delete test)");
+      if (dTa) {
+        dTa.value = "待删除的测试记录";
+        dTa.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       // walk through to save quickly (leave most fields default)
-      for (let s = 0; s < 11; s++) { click("btn-wiz-next"); await wait(120); }
-      click("btn-wiz-save");
+      for (let s = 0; s < 11; s++) {
+        const nextBtn = document.getElementById("btn-wiz-next");
+        if (nextBtn) nextBtn.click();
+        await wait(120);
+      }
+      const saveBtn2 = document.getElementById("btn-wiz-save");
+      assert(saveBtn2, "save button exists (delete test)");
+      if (saveBtn2) saveBtn2.click();
       await wait(200);
       assert(document.querySelectorAll(".entry-card").length === 2, "second entry created");
       // open the newest (top) card and delete it
-      document.querySelector(".entry-card").click();
+      const card2 = document.querySelector(".entry-card");
+      assert(card2, "entry card exists (delete test)");
+      if (card2) card2.click();
       await wait(150);
-      click("btn-detail-delete");
+      const delBtn = document.getElementById("btn-detail-delete");
+      assert(delBtn, "delete button exists");
+      if (delBtn) delBtn.click();
       await wait(150);
       const confirmBox = document.querySelector(".confirm-box");
       assert(confirmBox, "delete confirm dialog appears");
-      confirmBox.querySelector('[data-act="ok"]').click();
+      if (confirmBox) confirmBox.querySelector('[data-act="ok"]').click();
       await wait(200);
       assert(document.querySelectorAll(".entry-card").length === 1, "entry deleted");
       assert(JSON.parse(localStorage.getItem("cognitive-reappraisal-entries")).length === 1, "delete persisted");
@@ -448,7 +542,7 @@ async function runAtSize(width, height, ws, pageUrl) {
       function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
       function click(id) {
         const el = document.getElementById(id);
-        if (!el) throw new Error("missing " + id);
+        if (!el) { results.push({ pass: false, msg: "missing element: " + id }); return; }
         el.click();
       }
 

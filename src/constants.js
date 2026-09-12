@@ -1,18 +1,19 @@
 export const STORAGE_KEY = "cognitive-reappraisal-entries";
+export const WIZARD_KEY = "cognitive-reappraisal-wizard-draft";
 
-  // The 8 specific cognitive distortion types (Beck / Burns).
+// The 8 specific cognitive distortion types (Beck / Burns).
 // "以上都不像" and "跳过" are handled as separate actions, not tags.
-  export const DISTORTIONS = [
+export const DISTORTIONS = [
     "灾难化", "非黑即白", "以偏概全", "读心术",
     "贴标签", "应该式思维", "个人化", "情绪化推理"
   ];
 
   // The "none of the above" marker — a distinct, meaningful negative signal
-  // (the user judged it's not a common distortion), exported to the reviewer.
-  export const NONE_OF_ABOVE = "以上都不像";
+// (the user judged it's not a common distortion), exported to the reviewer.
+export const NONE_OF_ABOVE = "以上都不像";
 
-  // Explanations for each distortion (based on Beck / Burns CBT literature)
-  export const DISTORTION_INFO = {
+// Explanations for each distortion (based on Beck / Burns CBT literature)
+export const DISTORTION_INFO = {
     "灾难化": {
       desc: "直接跳到最坏的可能结果，并把它当成必然会发生的事。",
       example: "这次汇报要是搞砸了，我就肯定会被开除。"
@@ -62,7 +63,7 @@ export const STORAGE_KEY = "cognitive-reappraisal-entries";
   // Field definitions for the wizard, in order.
 // Examples follow one consistent scenario (a friend not replying to a message)
 // so the user can see how the same situation flows through the whole record.
-  export const WIZARD_FIELDS = [
+export const WIZARD_FIELDS = [
     {
       key: "situation", type: "textarea", prompt: "发生了什么？",
       hint: "只写客观事实，具体的时间、地点、人物，不要写你的解读。",

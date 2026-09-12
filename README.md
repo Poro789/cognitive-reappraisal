@@ -14,6 +14,9 @@
 - **逐字段引导**：一次只问一个问题，降低填写门槛，减少中途放弃。
 - **无压力设计**：没有进度条、打卡、成就徽章；「待回填」只是中性灰字，不制造焦虑。
 - **导出给 AI 审查**：勾选若干条记录，一键复制成结构化纯文字（内置审查指令模板），发给 AI 做诚实的外部视角检查。
+- **JSON 备份**：列表页底部可导出/导入 JSON 文件，用于跨设备迁移或长期备份。
+- **回顾**：查看练习概况（总记录、回填率、平均强度变化）和最近记录的情绪强度趋势。
+- **草稿恢复**：向导填写中途刷新或关闭页面，下次打开会提示继续上次未完成的记录。
 
 ## 使用
 
@@ -27,7 +30,7 @@
 - 点开记录**回填**实际结果（可选，几天到一两周后事情有了下文再填最好）；
 - 在列表里**选择记录 → 导出**，把文字发给 AI 审查。
 
-> 数据保存在浏览器本地。清除浏览器数据会删除记录；如需长期保留，定期「导出」备份即可。
+> 数据保存在浏览器本地。清除浏览器数据会删除记录；如需长期保留或跨设备迁移，使用列表页底部的「导出 JSON」备份，在新设备上「导入 JSON」即可。
 
 ## 字段说明
 
@@ -52,14 +55,20 @@
 - **代码结构**：
   - `src/constants.js` — 认知扭曲类型、审查指令、向导字段定义
   - `src/utils.js` — 纯函数（uid / formatDate / truncate / escapeHtml / draftHasContent）
-  - `src/state.js` — 应用状态、localStorage 读写、getEntry / deleteEntry
+  - `src/state.js` — 应用状态、localStorage 读写、条目增删改、JSON 导入/导出、向导草稿持久化
   - `src/export.js` — 导出文本构建、剪贴板复制
-  - `src/main.js` — 渲染与视图（列表 / 向导 / 详情 / 导出模态框）
+  - `src/confirm.js` — Promise 化确认对话框
+  - `src/views/list.js` — 列表视图（含数据管理、恢复草稿横幅）
+  - `src/views/wizard.js` — 向导视图（逐步填写）
+  - `src/views/detail.js` — 详情视图（字段编辑、回填）
+  - `src/views/review.js` — 回顾视图（统计 + 强度趋势）
+  - `src/views/export-modal.js` — 导出模态框
+  - `src/main.js` — 路由与初始化
   - `src/styles.css` — 全部样式
 - 数据模型与标准思维记录表对齐，不自创字段。
 - **测试**：
-  - `npm test` — Vitest 单元测试（`src/*.test.js`，覆盖纯函数与导出逻辑）
-  - `npm run test:e2e` — 无头 Chrome E2E（`test-browser.js`，指向 `dist/` 构建产物，需先 `npm run build`，需本机 Chrome）
+  - `npm test` — Vitest 单元测试（`src/*.test.js`，覆盖纯函数、导出逻辑、状态管理）
+  - `npm run test:e2e` — 无头 Chrome E2E（`test-browser.cjs`，指向 `dist/` 构建产物，需先 `npm run build`，需本机 Chrome）
 
 ## 免责声明
 
