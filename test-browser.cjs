@@ -35,7 +35,8 @@ if (!fs.existsSync(path.join(distDir, "index.html"))) {
 
 const MIME = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
-  ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png"
+  ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
+  ".webmanifest": "application/manifest+json"
 };
 function startServer() {
   return new Promise((resolve) => {

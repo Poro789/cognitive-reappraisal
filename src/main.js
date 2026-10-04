@@ -77,6 +77,14 @@ document.addEventListener("keydown", function(ev) {
 
 render();
 
+// PWA: register the hand-written service worker (offline support).
+// Failure is fine (unsupported browsers, file:// etc.).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("./sw.js").catch(function() {});
+  });
+}
+
 // Expose for automated testing (harmless in production)
 window.__CR_TEST__ = {
   getState: function() { return state; },

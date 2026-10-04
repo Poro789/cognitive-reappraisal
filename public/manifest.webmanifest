@@ -1,0 +1,15 @@
+{
+  "name": "思维记录 · Cognitive Reappraisal",
+  "short_name": "思维记录",
+  "description": "CBT 七栏思维记录：认知重评练习。纯前端，数据只存在你的浏览器里。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#3d5a6c",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
