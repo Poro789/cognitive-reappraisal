@@ -56,6 +56,10 @@ export function renderReview(app, render) {
     if (recent.length >= 2) {
       html += '<div class="review-trend">';
       html += '<div class="review-trend-title">情绪强度趋势（最近 ' + recent.length + ' 条）</div>';
+      html += '<div class="trend-plot">';
+      // Scale rail: bar heights are only meaningful against the 1-10 rating
+      // the wizard asks for, so label the axis instead of leaving the bars bare.
+      html += '<div class="trend-axis" aria-hidden="true"><span>10</span><span>5</span><span>0</span></div>';
       html += '<div class="trend-chart">';
       var maxVal = 10;
       recent.forEach(function(e, i) {
@@ -69,6 +73,7 @@ export function renderReview(app, render) {
         html += '<div class="trend-num">' + (i + 1) + '</div>';
         html += '</div>';
       });
+      html += '</div>';
       html += '</div>';
       html += '<div class="trend-legend"><span class="legend-before">之前</span><span class="legend-after">之后</span></div>';
       html += '</div>';

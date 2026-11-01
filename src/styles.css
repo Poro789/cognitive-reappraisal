@@ -1085,15 +1085,43 @@ body.selecting .entry-check {
 }
 
 .trend-chart {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: 3px;
   height: 120px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 12px 8px 4px;
 }
+
+.trend-plot {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+/* Rail of scale marks. Its padding matches .trend-chart's box padding plus
+   the height of the .trend-num label row, so 10/5/0 line up with the bar area. */
+.trend-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 16px;
+  padding: 12px 0 22px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Center the end marks on the bar area's edges (the middle one already lands
+   on the 5 hairline). */
+.trend-axis span:first-child { transform: translateY(-50%); }
+.trend-axis span:last-child { transform: translateY(50%); }
 
 .trend-col {
   flex: 1;
@@ -1106,21 +1134,31 @@ body.selecting .entry-check {
 .trend-bars {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
   width: 100%;
   justify-content: center;
+  /* Hairline at the midpoint of the bar area = intensity 5. */
+  background-image: linear-gradient(
+    to top,
+    transparent calc(50% - 0.5px),
+    var(--line) calc(50% - 0.5px) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
 }
 
 .trend-bar {
-  width: 8px;
+  /* Shrink with the column so 14 entries never overflow the card; the 10px
+     cap keeps them from becoming slabs on desktop. */
+  flex: 1 1 0;
+  max-width: 10px;
+  min-width: 2px;
   border-radius: 2px 2px 0 0;
   min-height: 2px;
 }
 
 .trend-bar.before {
-  background: var(--muted);
-  opacity: 0.5;
+  background: var(--chart-before);
 }
 
 .trend-bar.after {
@@ -1128,9 +1166,11 @@ body.selecting .entry-check {
 }
 
 .trend-num {
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 14px;
   color: var(--muted);
   margin-top: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .trend-legend {
@@ -1147,8 +1187,7 @@ body.selecting .entry-check {
   display: inline-block;
   width: 10px;
   height: 10px;
-  background: var(--muted);
-  opacity: 0.5;
+  background: var(--chart-before);
   border-radius: 2px;
   margin-right: 4px;
 }
