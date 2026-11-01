@@ -120,6 +120,11 @@ function getFreePort() {
 }
 
 // Launch Chrome once and return { chrome, ws }. Reused across all viewports.
+// Uncaught browser exceptions (Runtime.exceptionThrown) counted per viewport.
+// An app that passes every assertion but throws is still broken, so these
+// fail the run just like a failed assert does.
+let uncaughtExceptions = 0;
+
 async function launchChrome() {
   // Use a random free port to avoid conflicts with other Chrome instances.
   const debugPort = await getFreePort();
@@ -166,6 +171,7 @@ async function launchChrome() {
       console.log("[browser]", ...args);
     }
     if (msg.method === "Runtime.exceptionThrown") {
+      uncaughtExceptions++;
       console.log("[browser-exception]", JSON.stringify(msg.params.exceptionDetails, null, 2));
     }
   });
@@ -175,6 +181,7 @@ async function launchChrome() {
 }
 
 async function runAtSize(width, height, ws, pageUrl) {
+  uncaughtExceptions = 0;
   // Force exact viewport
   sendMsg(ws, 0, "Emulation.setDeviceMetricsOverride", {
     width: width, height: height, deviceScaleFactor: 2, mobile: width < 768
@@ -610,7 +617,10 @@ const fuLine = exportText.split(String.fromCharCode(10)).find(l => l.indexOf("å›
     const totalPass = value1.pass + value2.pass;
     const totalFail = value1.fail + value2.fail;
     console.log(`\n${totalPass} passed, ${totalFail} failed`);
-    return totalFail === 0;
+    if (uncaughtExceptions > 0) {
+      console.error("FAIL: " + uncaughtExceptions + " uncaught browser exception(s) at this viewport");
+    }
+    return totalFail === 0 && uncaughtExceptions === 0;
   } else {
     console.error("FAIL: no result from phase 2");
     console.error(JSON.stringify(result2, null, 2));
