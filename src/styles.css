@@ -4,7 +4,8 @@
   --surface: #ffffff;
   --accent: #3d5a6c;
   --accent-soft: #e8edf0;
-  --muted: #8a9296;
+  --muted: #5f6a70;   /* 4.9:1 on --paper, 5.5:1 on --surface (WCAG AA) */
+  --chart-before: #7d8b95; /* solid, 3.5:1 on --surface (WCAG 1.4.11 graphics) */
   --line: #e2e0da;
   --radius: 6px;
   --touch: 44px;
